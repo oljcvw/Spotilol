@@ -1,0 +1,640 @@
+package com.project.lol.webview
+
+import android.graphics.Bitmap
+import android.util.Log
+import android.webkit.RenderProcessGoneDetail
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import java.io.ByteArrayInputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.regex.Pattern
+
+class SpotifyWebViewClient(
+    private val onLoginRequired: () -> Unit
+) : WebViewClient() {
+
+    override fun onPageFinished(view: WebView?, url: String?) {
+        super.onPageFinished(view, url)
+        if (view == null || url == null) return
+
+        if (url.startsWith("https://www.facebook.com/privacy/consent/gdp/")) {
+            onPageFinishedClean(view, FB_GDPR_BYPASS)
+            return
+        }
+
+        if (url.endsWith("/login")) {
+            onPageFinishedClean(view, CLASSIC_LOGIN_BUTTON)
+        }
+
+        val loggedIn = view.context.getSharedPreferences("spotilol_prefs", 0)
+            .getBoolean("LoggedIn", false)
+
+        if (!loggedIn) {
+            onPageFinishedClean(view, LOGIN_DETECTION)
+            return
+        }
+
+        injectPlayerControl(view)
+    }
+
+    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+        super.onPageStarted(view, url, favicon)
+        view?.evaluateJavascript(BROWSER_SPOOF, null)
+        view?.evaluateJavascript(FETCH_OVERRIDE, null)
+    }
+
+    override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+        Log.w(TAG, "Renderer process gone: crashed=${detail?.didCrash()}")
+        view?.let {
+            it.stopLoading()
+            it.destroy()
+        }
+        return true
+    }
+
+    override fun shouldInterceptRequest(
+        view: WebView?,
+        request: WebResourceRequest?
+    ): WebResourceResponse? {
+        val url = request?.url?.toString() ?: return null
+        val method = request?.method ?: "GET"
+
+        if (isAnalyticsDomain(url)) {
+            val headers = mapOf("Access-Control-Allow-Origin" to "*")
+            return WebResourceResponse("text/plain", "utf-8", 200, "OK", headers,
+                ByteArrayInputStream(ByteArray(0)))
+        }
+
+        if (isKnownAudioCdn(url)) {
+            try {
+                val realConn = URL(url).openConnection() as HttpURLConnection
+                try {
+                    realConn.requestMethod = method
+                    realConn.connectTimeout = 5000
+                    realConn.readTimeout = 5000
+
+                    request?.requestHeaders?.forEach { (key, value) ->
+                        realConn.setRequestProperty(key, value)
+                    }
+
+                    realConn.connect()
+                    val contentType = realConn.contentType
+
+                    if (contentType != null
+                        && contentType.equals("audio/mpeg", ignoreCase = true)
+                        && !isAudioWhitelisted(url)
+                    ) {
+                        view?.post { view?.evaluateJavascript("AndBridge.deferMessage('adblock')", null) }
+                        val silent = view?.context?.assets?.open("silent.mp3") ?: return null
+                        return WebResourceResponse("audio/mpeg", null, silent)
+                    }
+                } finally {
+                    realConn.disconnect()
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        return null
+    }
+
+    private fun injectPlayerControl(view: WebView) {
+        val prefs = view.context.getSharedPreferences("spotilol_prefs", 0)
+        val autoPlayMode = prefs.getString("APlayMode", "disabled") ?: "disabled"
+        val amoledEnabled = prefs.getBoolean("AmoledTheme", false)
+
+        val js = buildString {
+            append("window.autoPlayMode='$autoPlayMode';\n")
+            append(BASE_PLAYER_VARS)
+            append(MEDIA_UPDATER)
+            append(LIBRARY_FETCHER)
+            append(LIBRARY_PARSER)
+            append(PLAYBACK_CONTROLS)
+            append(MAIN_LOOP)
+            append(AUTO_FEATURES)
+            append(ANDROID_AUTO_TRACKER)
+            append(CSS_JS_HACK)
+            if (amoledEnabled) {
+                append(AMOLED_THEME)
+            }
+        }
+        view.evaluateJavascript(stripConsoleLogs(js), null)
+    }
+
+    private fun onPageFinishedClean(view: WebView, js: String) {
+        view.evaluateJavascript(stripConsoleLogs(js), null)
+    }
+
+    private fun stripConsoleLogs(code: String): String {
+        return CONSOLE_LOG_PATTERN.matcher(code).replaceAll("")
+    }
+
+    companion object {
+        private const val TAG = "SpotifyWebViewClient"
+        private val CONSOLE_LOG_PATTERN = Pattern.compile("console\\.log\\([^)]*\\);?")
+
+        private const val FB_GDPR_BYPASS = """
+            (function(){
+                var btn = document.querySelector('#facebook div[role=button]');
+                if(btn) btn.click();
+            })();
+        """
+
+        private const val CLASSIC_LOGIN_BUTTON = """
+            (function(){
+                var gl = document.querySelector('section>div>div>div>div>a:first-child:not(.fuckd)');
+                if(gl) {
+                    var cl = document.createElement('a');
+                    cl.className = 'fuckd';
+                    cl.innerText = 'Email + Password Classic Login';
+                    cl.style.cssText = 'display:block;padding:10px;margin:10px 0;color:white;font-weight:bold;text-decoration:none;border:1px solid #ddd;background:#339;border-radius:30px';
+                    cl.href = '?allow_password=1';
+                    gl.parentNode.insertBefore(cl, gl);
+                }
+            })();
+        """
+
+        private const val LOGIN_DETECTION = """
+            (function() {
+                var l = document.querySelector('button[data-testid=web-player-link]');
+                if(l) {
+                    AndBridge.loginDetected();
+                    l.click();
+                }
+            })();
+        """
+
+        private const val FETCH_OVERRIDE = """
+            (function(){
+                if(window.oriFetch) return;
+                var orig = window.fetch.bind(window);
+                window.oriFetch = orig;
+                window.fetch = function(input, init) {
+                    if(init && init.headers) {
+                        var h = init.headers;
+                        var auth, cliTok;
+                        if(typeof h.get === 'function') {
+                            auth = h.get('Authorization') || h.get('authorization');
+                            cliTok = h.get('Client-Token') || h.get('client-token');
+                        } else {
+                            auth = h.Authorization || h.authorization;
+                            cliTok = h['Client-Token'] || h['client-token'];
+                        }
+                        if(auth && typeof auth === 'string') {
+                            window.spotAuthToken = auth.indexOf('Bearer ')===-1 ? 'Bearer '+auth.replace(/^Bearer\s+/i,'') : auth;
+                        }
+                        if(cliTok) {
+                            window.spotCliToken = cliTok;
+                        }
+                    }
+                    var url = typeof input==='string' ? input : (input ? input.url : '');
+                    if(url && url.indexOf) {
+                        var m = url.match(/\/from\/([A-Za-z0-9_-]+)\/to\//);
+                        if(m && m[1]) window.spotDevId = m[1];
+                        var m2 = url.match(/connect-state\/v1\/player\/(?:command|transfer)\/from\/([A-Za-z0-9_-]+)\/to\/([A-Za-z0-9_-]+)/);
+                        if(m2 && m2[2]) window.spotDevId = m2[2];
+                        var m3 = url.match(/\/track-playback\/v1\/devices/);
+                        if(m3 && init && init.body) {
+                            try {
+                                var pb = typeof init.body==='string' ? JSON.parse(init.body) : init.body;
+                                if(pb && pb.device && pb.device.device_id && pb.device.device_id!==window.spotDevId) {
+                                    window.spotDevId = pb.device.device_id;
+                                }
+                            } catch(e){}
+                        }
+                        var m4 = url.match(/connect-state\/v1\/player\/command/);
+                        if(m4 && init && init.headers) {
+                            var body = init.body;
+                            if(body && typeof body==='string') {
+                                try {
+                                    var j = JSON.parse(body);
+                                    if(j && j.command && j.command.context && j.command.context.uri) {
+                                        var m5 = j.command.context.uri.match(/spotify:track:([A-Za-z0-9]+)/);
+                                        if(m5) {
+                                            window.lastPlayedTrack = m5[1];
+                                        }
+                                    }
+                                } catch(e){}
+                            }
+                        }
+                    }
+                    return orig.call(window, input, init);
+                };
+            })();
+        """
+
+        private const val BROWSER_SPOOF = """
+            (function(){
+                try {
+                    window.screen.__defineGetter__('width', function(){ return 1920; });
+                    window.screen.__defineGetter__('height', function(){ return 1080; });
+                    window.screen.__defineGetter__('availWidth', function(){ return 1920; });
+                    window.screen.__defineGetter__('availHeight', function(){ return 1040; });
+                    window.__defineGetter__('innerWidth', function(){ return 1920; });
+                    window.__defineGetter__('innerHeight', function(){ return 978; });
+                } catch(e){}
+                function safeDefine(obj, name, getter){
+                    try { Object.defineProperty(obj, name, { get: getter, configurable: true }); } catch(e){}
+                }
+                safeDefine(navigator, 'webdriver', function(){ return false; });
+                safeDefine(navigator, 'vendor', function(){ return 'Google Inc.'; });
+                safeDefine(navigator, 'productSub', function(){ return '20030107'; });
+                safeDefine(navigator, 'platform', function(){ return 'Win32'; });
+                safeDefine(navigator, 'oscpu', function(){ return 'Windows NT 10.0; Win64; x64'; });
+                safeDefine(navigator, 'languages', function(){ return ['en-US','en']; });
+                safeDefine(navigator, 'language', function(){ return 'en-US'; });
+                safeDefine(navigator, 'hardwareConcurrency', function(){ return 8; });
+                safeDefine(navigator, 'deviceMemory', function(){ return 8; });
+                safeDefine(navigator, 'maxTouchPoints', function(){ return 0; });
+                safeDefine(navigator, 'plugins', function(){
+                    var p = [
+                        { name:'Chrome PDF Plugin', filename:'internal-pdf-viewer', description:'Portable Document Format' },
+                        { name:'Chrome PDF Viewer', filename:'mhjfbmdgcfjbbpaeojofohoefgiehjai', description:'' },
+                        { name:'Native Client', filename:'internal-nacl-plugin', description:'' }
+                    ];
+                    p.length = 3;
+                    return p;
+                });
+                safeDefine(navigator, 'mimeTypes', function(){
+                    var m = [
+                        { type:'application/pdf', suffixes:'pdf', description:'Portable Document Format' },
+                        { type:'application/x-google-chrome-pdf', suffixes:'pdf', description:'Portable Document Format' }
+                    ];
+                    m.length = 2;
+                    return m;
+                });
+                try {
+                    var getParam = WebGLRenderingContext.prototype.getParameter;
+                    WebGLRenderingContext.prototype.getParameter = function(p){
+                        if(p === 37445) return 'Google Inc. (NVIDIA)';
+                        if(p === 37446) return 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1050 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)';
+                        return getParam.call(this, p);
+                    };
+                } catch(e){}
+                try {
+                    if(navigator.mediaDevices){
+                        var origEnumerate = navigator.mediaDevices.enumerateDevices;
+                        navigator.mediaDevices.enumerateDevices = function(){
+                            return origEnumerate.call(this).then(function(devices){
+                                return devices.map(function(d){
+                                    var c = Object.assign({}, d);
+                                    if(d.kind === 'audioinput') c.label = 'Default - Microphone (Realtek High Definition Audio)';
+                                    if(d.kind === 'audiooutput') c.label = 'Default - Speakers (Realtek High Definition Audio)';
+                                    return c;
+                                });
+                            });
+                        };
+                    }
+                } catch(e){}
+                try {
+                    if(navigator.connection){
+                        Object.defineProperty(navigator.connection, 'rtt', { get: function(){ return 50; } });
+                    }
+                } catch(e){}
+            })();
+        """
+
+        private const val BASE_PLAYER_VARS = """
+            var reqPause=false,firstPlay=true,ulFlag=false,ffDone=false,npOpen=false;
+            var featVer='web-player_'+new Date().toISOString().split('T')[0]+'_'+Date.now()+'_'+Math.floor(Math.random()*0xFFFFFFF).toString(16).padStart(7,'0');
+            var lastState=null,lastPos=null,playing=false;
+            var pfint=null,afint=null,cssint=null,aaint=null;
+        """
+
+        private const val MEDIA_UPDATER = """
+            window.updMedia = function(){
+                var currState=track+'|'+artist+'|'+playing+'|'+repmode+'|'+isfav;
+                if(currState!==lastState) {
+                    lastState=currState;
+                    var values={artist:artist,track:track,playing:playing,repeat:repmode,fav:isfav,duration:duration,position:position,cover:cover};
+                    AndBridge.recMediaStatus(JSON.stringify(values));
+                } else {
+                    AndBridge.recMediaPosition(position);
+                    lastPos=position;
+                }
+            };
+        """
+
+        private const val LIBRARY_FETCHER = """
+            window.fetchAllLibrary = async function(){
+                var limit=50, offset=0, allItems=[], hasMore=true;
+                while(hasMore){
+                    var resp = await oriFetch('https://api-partner.spotify.com/pathfinder/v2/query',{
+                        method:'POST',
+                        headers:{
+                            'Authorization':window.spotAuthToken,
+                            'Client-Token':window.spotCliToken,
+                            'Content-Type':'application/json;charset=UTF-8'
+                        },
+                        body:JSON.stringify({
+                            variables:{
+                                filters:[],order:null,textFilter:'',
+                                features:['LIKED_SONGS','YOUR_EPISODES_V2','PRERELEASES','EVENTS'],
+                                limit:limit,offset:offset,flatten:false,expandedFolders:[],
+                                folderUri:null,includeFoldersWhenFlattening:true
+                            },
+                            operationName:'libraryV3',
+                            extensions:{persistedQuery:{version:1,sha256Hash:'0082bf82412db50128add72dbdb73e2961d59100b9cbf41fb25c568bd8bc358b'}}
+                        })
+                    });
+                    var data = await resp.json();
+                    var items = (data && data.data && data.me && data.me.libraryV3 && data.me.libraryV3.items) || [];
+                    allItems = allItems.concat(items);
+                    if(items.length < limit) hasMore=false; else offset+=limit;
+                }
+                return allItems;
+            };
+        """
+
+        private const val LIBRARY_PARSER = """
+            window.parseLibrary = function(items) {
+                var res={playlists:[],albums:[],artists:[],podcasts:[]};
+                items.forEach(function(entry){
+                    var data = entry.item && entry.item.data;
+                    if(!data || !data.__typename) return;
+                    switch(data.__typename) {
+                        case 'PseudoPlaylist':
+                        case 'Playlist':
+                            res.playlists.push({id:data.uri,name:data.name,image:data.images&&data.images.items&&data.images.items[0]&&data.images.items[0].sources&&data.images.items[0].sources[0]?data.images.items[0].sources[0].url:null});
+                            break;
+                        case 'Album':
+                            res.albums.push({id:data.uri,name:data.name,image:data.coverArt&&data.coverArt.sources?data.coverArt.sources[0].url:null,artists:data.artists&&data.artists.items?data.artists.items.map(function(a){return a.profile&&a.profile.name}).filter(Boolean):[]});
+                            break;
+                        case 'Artist':
+                            res.artists.push({id:data.uri,name:data.profile&&data.profile.name,image:data.visuals&&data.visuals.avatarImage&&data.visuals.avatarImage.sources?data.visuals.avatarImage.sources[0].url:null});
+                            break;
+                        case 'Podcast':
+                            res.podcasts.push({id:data.uri,name:data.name,image:data.coverArt&&data.coverArt.sources?data.coverArt.sources[0].url:null,artists:data.publisher&&data.publisher.name?[data.publisher.name]:[]});
+                            break;
+                    }
+                });
+                return res;
+            };
+        """
+
+        private const val PLAYBACK_CONTROLS = """
+            window.playFromUri = function(uri) {
+                var type = uri.match(/^spotify:([^:]+)/);
+                type = type ? type[1] : 'your_library';
+                if(type=='user') type='your_library';
+                oriFetch('https://gew4-spclient.spotify.com/connect-state/v1/player/command/from/'+window.spotDevId+'/to/'+window.spotDevId, {
+                    method:'POST',
+                    headers:{'Authorization':window.spotAuthToken,'Client-Token':window.spotCliToken,'Content-Type':'application/json'},
+                    body:JSON.stringify({
+                        command:{
+                            context:{uri:uri,url:'context://'+uri,metadata:{}},
+                            play_origin:{feature_identifier:type,feature_version:featVer,referrer_identifier:'your_library'},
+                            options:{license:'tft',skip_to:{},player_options_override:{}},
+                            endpoint:'play'
+                        }
+                    })
+                });
+            };
+            window.actPlayPause = function(play) {
+                if('pBtn' in window) {
+                    if(pBtn.getAttribute('aria-label')==='Play') { if(play) pBtn.click(); }
+                    else { if(!play) pBtn.click(); }
+                }
+            };
+            window.actSkipBack = function() {
+                var bb = document.querySelector('button[data-testid=control-button-skip-back]');
+                if(bb) { AndBridge.wakeUp(); bb.click(); }
+            };
+            window.actSkipForward = function() {
+                var fb = document.querySelector('button[data-testid=control-button-skip-forward]');
+                if(fb) { AndBridge.wakeUp(); fb.click(); }
+            };
+            window.actRepeat = function() {
+                var rb = document.querySelector('button[data-testid=control-button-repeat]');
+                if(rb) {
+                    if(repmode=='false') repmode='true';
+                    else if(repmode=='true') repmode='mixed';
+                    else repmode='false';
+                    updMedia();
+                    rb.click();
+                }
+            };
+            window.actAddToFav = function() {
+                var fb = document.querySelector('div[data-testid=now-playing-widget]>div:last-child>button');
+                if(fb) {
+                    if(fb.getAttribute('aria-checked')==='false') {
+                        fb.click();
+                        isfav=true;
+                        updMedia();
+                    } else {
+                        AndBridge.wakeUp();
+                        fb.click();
+                        var rfint = setInterval(function(){
+                            var fr = document.querySelector('#context-menu button[role=menuitemcheckbox][aria-checked=true]');
+                            if(fr) {
+                                clearInterval(rfint);
+                                fr.click();
+                                setTimeout(function(){
+                                    var sb = document.querySelector('#context-menu button[type=submit]');
+                                    if(sb) { sb.click(); isfav=false; updMedia(); }
+                                    AndBridge.wakeOff();
+                                },500);
+                            }
+                        },1000);
+                    }
+                }
+            };
+            window.actSeek = function(pos) {
+                var rg = document.querySelector('div[data-testid=playback-progressbar] input[type=range]');
+                if(rg) { rg.value=pos+1; rg.dispatchEvent(new Event('change',{bubbles:true})); }
+            };
+        """
+
+        private const val MAIN_LOOP = """
+            window.firstFuck = function(){
+                if(pfint) clearInterval(pfint);
+                pfint = setInterval(function(){
+                    if(playing && document.visibilityState=='hidden' && !!document.querySelector('.VideoPlayer__container video')) {
+                        AndBridge.wakeUp();
+                    } else if(!AndBridge.isWoke() && document.visibilityState=='visible' && !document.querySelector('.VideoPlayer__container video')) {
+                        AndBridge.wakeOff();
+                    }
+
+                    var pb = document.querySelector('aside button[data-testid=control-button-playpause]:not(.fuckd)');
+                    if(pb) {
+                        AndBridge.playLoaded();
+                        pb.classList.add('fuckd');
+                        window.pBtn = pb;
+
+                        pBtn.addEventListener('click', function(){
+                            if(pBtn.getAttribute('aria-label')!=='Play') {
+                                reqPause=true;
+                                ulFlag=false;
+                                AndBridge.wakeOff();
+                            } else if(!ulFlag) {
+                                reqPause=false;
+                                AndBridge.wakeUp();
+                                ulFlag=true;
+                                setTimeout(function(){
+                                    if(ulFlag && pBtn.getAttribute('aria-label')==='Play') {
+                                        AndBridge.deferMessage('unlock');
+                                        actSkipForward();
+                                    } else if(ulFlag) { ulFlag=false; }
+                                },10000);
+                            }
+                        });
+
+                        if(!ffDone){
+                            ffDone=true;
+                            AndBridge.manageTShut(true);
+                            AndBridge.manageTSleep(false);
+                            addAutoFeatures();
+                            addCSSJSHack();
+                            addAndAuto();
+                            setTimeout(function(){ if(window.autoPlayMode!=='disabled' && playing) actPlayPause(true); },10000);
+                        }
+                    }
+                },5000);
+            };
+            firstFuck();
+        """
+
+        private const val AUTO_FEATURES = """
+            window.addAutoFeatures = function(){
+                if('pBtn' in window && firstPlay && window.autoPlayMode!=='disabled' && pBtn.getAttribute('aria-label')==='Play') {
+                    pBtn.click();
+                    firstPlay=false;
+                }
+                if(afint) clearInterval(afint);
+                afint = setInterval(function(){
+                    closeNowPlay();
+                    var ft = document.querySelector('aside div.encore-bright-accent-set button');
+                    if(ft) {
+                        ft.click();
+                        setTimeout(function(){
+                            var cb = document.querySelector('aside ul[role=list] li[role=listitem] div[role=button]');
+                            if(cb) cb.click();
+                        },500);
+                    }
+                    if(window.autoPlayMode==='permanent' && 'pBtn' in window && !reqPause && !ulFlag && pBtn.getAttribute('aria-label')==='Play') {
+                        pBtn.click();
+                    }
+                },5000);
+            };
+        """
+
+        private const val ANDROID_AUTO_TRACKER = """
+            window.addAndAuto = function(){
+                if(aaint) clearInterval(aaint);
+                aaint = setInterval(function(){
+                    var ta = document.querySelector('a[data-testid=context-item-link]');
+                    if(ta) track=ta.text; else track=null;
+                    var aa = document.querySelector('a[data-testid=context-item-info-artist]');
+                    if(!aa) aa = document.querySelector('a[data-testid=context-item-info-show]');
+                    if(aa) artist=aa.text; else artist='';
+                    var rr = document.querySelector('button[data-testid=control-button-repeat]');
+                    if(rr) repmode=rr.getAttribute('aria-checked'); else repmode='false';
+                    var fb = document.querySelector('div[data-testid=now-playing-widget]>div:last-child>button');
+                    if(fb && fb.getAttribute('aria-checked')==='true') isfav=true; else isfav=false;
+                    var pb = document.querySelector('button[data-testid=control-button-playpause]');
+                    if(pb) playing=pb.getAttribute('aria-label')!=='Play';
+                    var rg = document.querySelector('div[data-testid=playback-progressbar] input[type=range]');
+                    if(rg) { duration=parseInt(rg.getAttribute('max')); position=parseInt(rg.getAttribute('value')); }
+                    else { duration=null; position=null; }
+                    var im = document.querySelector('img[data-testid=cover-art-image]');
+                    if(im) {
+                        var s=im.src;
+                        if(s.indexOf('i.scdn.co')!==-1) {
+                            s=s.replace(/ab67616d0000[0-9a-f]{4}/,'ab67616d000082c1');
+                            s=s.replace(/ab6761670000[0-9a-f]{4}/,'ab676167000082e8');
+                        }
+                        cover=s;
+                    } else cover=null;
+                    updMedia();
+                },1000);
+            };
+        """
+
+        private const val CSS_JS_HACK = """
+            window.closeNowPlay=function(){
+                var rc=document.querySelector('#Desktop_PanelContainer_Id');
+                if(rc&&rc.parentNode.parentNode.ariaHidden=='false'){clickNP();}
+            };
+            window.clickNP=function(){
+                var rBtn=document.querySelector('#Desktop_PanelContainer_Id').parentNode.parentNode.nextElementSibling.querySelector('button');
+                if(rBtn){
+                    var npHid=document.querySelector('#Desktop_LeftSidebar_Id').parentNode.parentNode.ariaHidden;
+                    if(npHid&&npHid=='true') npBtn.classList.add('active'); else npBtn.classList.remove('active');
+                    rBtn.click();
+                }
+            };
+            window.switchLs=function(){
+                var ls=document.querySelector('#Desktop_LeftSidebar_Id');
+                if(ls){
+                    var exp=ls.querySelector('nav>div>div:first-child').classList.length;
+                    if(exp==2){
+                        ls.style.position='fixed';ls.style.width='100%';ls.style.height='92%';ls.style.left=0;ls.style.zIndex=20;
+                        var lh=ls.querySelector('header>div>div:first-child h1');
+                        if(lh) lh.innerHTML='\u2716 &nbsp; Close Library';
+                    } else {
+                        ls.style.zIndex=1;ls.style.position='fixed';ls.style.top='0';ls.style.left='60px';ls.style.width='48px';ls.style.height='48px';
+                    }
+                }
+            };
+            window.addCSSJSHack=function(){
+                if(cssint) clearInterval(cssint);
+                cssint=setInterval(function(){
+                    var lb=document.querySelector('#Desktop_LeftSidebar_Id header>div>div:first-child button:not(.fuckd)');
+                    if(lb){
+                        window.lBtn=lb;lb.classList.add('fuckd','lbtn');lb.style.padding=0;lb.style.height='20px';
+                        lb.addEventListener('click',function(){setTimeout(function(){switchLs();},0);});
+                        switchLs();AndBridge.cssInjected();
+                    }
+                    var lbit=document.querySelector('#Desktop_LeftSidebar_Id div[role=grid]:not(.fuckd)');
+                    if(lbit){lbit.classList.add('fuckd');lbit.addEventListener('click',function(){setTimeout(function(){lBtn.click();closeNowPlay();},0);});}
+                    var hb=document.querySelector('#global-nav-bar button[data-testid=home-button]:not(.fuckd)');
+                    if(hb){hb.classList.add('fuckd');hb.addEventListener('click',function(){closeNowPlay();});}
+                    var sr=document.querySelector('input[data-testid=search-input]:not(.fuckd)');
+                    if(sr){
+                        sr.classList.add('fuckd');
+                        sr.addEventListener('focus',function(){var npb=document.querySelector('aside[data-testid=now-playing-bar]');if(npb) npb.style.display='none';closeNowPlay();});
+                        sr.addEventListener('blur',function(){var npb=document.querySelector('aside[data-testid=now-playing-bar]');if(npb) npb.style.display='flex';});
+                    }
+                    var ub=document.querySelector('button[data-testid=user-widget-link]:not(.fuckd)');
+                    if(ub){ub.classList.add('fuckd');ub.addEventListener('click',function(){closeNowPlay();});}
+                },5000);
+            };
+            var st=document.createElement('style');
+            st.textContent='body{min-width:100%!important;min-height:100%!important} .os-scrollbar{--os-size:6px!important} .contentSpacing{padding:0} div[data-testid=root]{--panel-gap:0!important} #main-view+div,#main-view+div>div{overflow:hidden!important;width:auto} #main-view+div>div>div>div:nth-child(2)>div{width:100vw!important} div[data-encore-id=banner],#global-nav-bar>div:first-of-type,#global-nav-bar a[href="/download"],button[data-testid=fullscreen-mode-button],div.main-view-container__mh-footer-container{display:none!important} section[data-testid=artist-page]>div>div:first-child:not([data-encore-id]){height:25vh} div[data-testid=tracklist-row]{padding:0 10px 0 0;grid-gap:0} div[data-testid=tracklist-row] button:not([data-testid=add-to-playlist-button]){transform:scale(1.3)!important;opacity:0.6!important} div[data-testid=tracklist-row] button:{-webkit-margin-end:0!important} div[data-testid=tracklist-row] button:hover{color:#2d6!important} div[data-testid=tracklist-row]>div:first-child>div:first-child{height:24px;min-height:24px;min-width:24px;margin:0 8px!important} [aria-colcount="3"] div[data-testid=tracklist-row]{grid-template-columns:[index] var(--tracklist-index-column-width,40px) [first] minmax(120px,var(--col1,4fr)) [last] minmax(82px,var(--col2,1fr))!important} [aria-colcount="4"] div[data-testid=tracklist-row]{grid-template-columns:[index] var(--tracklist-index-column-width,40px) [first] minmax(120px,var(--col1,4fr)) [var1] minmax(120px,var(--col2,2fr)) [last] minmax(82px,var(--col3,1fr))!important} [aria-colcount="5"] div[data-testid=tracklist-row]{grid-template-columns:[index] var(--tracklist-index-column-width,40px) [first] minmax(120px,var(--col1,6fr)) [var1] minmax(120px,var(--col2,4fr)) [var2] minmax(120px,var(--col3,3fr)) [last] minmax(82px,var(--col4,1fr))!important} section[data-testid=track-page]>div.contentSpacing>div:nth-child(2) [aria-colcount="2"] div[data-testid=tracklist-row]{grid-template-columns:[first] minmax(120px,var(--col0,4fr)) [last] minmax(82px,var(--col1,1fr))!important} section[data-testid=track-page]>div.contentSpacing>div:nth-child(2) [aria-colcount="3"] div[data-testid=tracklist-row]{grid-template-columns:[first] minmax(120px,var(--col0,4fr)) [var1] minmax(120px,var(--col1,2fr)) [last] minmax(82px,var(--col2,1fr))!important} .npbtn{cursor:pointer;color:#b3b3b3;background:transparent;border:none;width:32px;height:32px;padding:8px} .npbtn.active{color:#FFCC80} *{--content-spacing:10px} section[data-testid=home-page] .contentSpacing{padding:0 10px!important;overflow:hidden} div[data-testid=grid-container]{margin-inline:0!important;column-gap:0!important;overflow:hidden!important} div[data-testid=action-bar-row],div[data-testid=topbar-content]{padding:5px 10px} div[data-testid=track-list]>div:first-child,div[data-testid=playlist-tracklist]>div:first-child{margin:0!important;padding:0!important} main>section:not([data-testid=artist-page])>div:first-child{height:auto!important;min-height:auto!important;padding:10px} section[data-testid=track-page]>div>div.contentSpacing>div:last-child{overflow:hidden} section[data-testid=artist-page]>div>div:first-child>div.contentSpacing{padding:10px} section[data-testid=artist-page] div[data-testid=grid-container] h2,section[data-testid=artist-page] section[data-testid=component-shelf]{padding:0 10px} main>section h1.encore-text-headline-large{font-size:22px!important} section[data-testid=artist-page] span.encore-text-headline-large{font-size:26px!important} section[data-testid=track-page] h1{font-size:20px!important} aside[data-testid=now-playing-bar]{min-width:100%!important;box-shadow:0 0 6px #CC8800;background:linear-gradient(to bottom,#FFCC80,#FFB74D)!important} aside[data-testid=now-playing-bar]>div:first-child{margin-top:2px;flex-direction:column!important;height:auto!important} aside[data-testid=now-playing-bar]>div>div{width:100%!important} aside[data-testid=now-playing-bar]>div>div:last-child>div{min-height:32px;margin:5px 10px} aside[data-testid=now-playing-bar]>div>div:last-child button{transform:scale(1.15);margin:0 5px} div[data-testid=general-controls]{margin:15px 0 25px} div[data-testid=general-controls] button{transform:scale(1.4)!important;margin:0 8px!important} div[data-testid=player-controls]{margin:5px 0} div[data-testid=now-playing-widget]{justify-content:center;overflow:hidden} form[role=search]{z-index:10;margin-left:48px;max-width:88%} div[data-testid=now-playing-widget]>div:last-child>button{transform:scale(1.3)} div[data-testid=now-playing-widget]>div:first-child{display:none!important} div[data-testid=now-playing-widget]>div:nth-child(2){display:flex!important;overflow:hidden!important} div[data-testid=now-playing-widget]>div:nth-child(2) span{font-size:13px!important;height:20px!important;margin:0!important} div[data-testid=now-playing-widget]>div:nth-child(2)>div{min-width:auto;max-width:66%} [data-tippy-root]{overflow:hidden!important} [data-tippy-root],[data-tippy-root] *{transition:none!important;transform:none!important} div[data-testid=hover-or-focus-tooltip],#Desktop_LeftSidebar_Id header>div>div:last-child{display:none!important} #Desktop_LeftSidebar_Id>nav>div{min-height:48px;border-radius:25px} .YourLibraryX{overflow:hidden;background:var(--background-elevated-base)!important} .YourLibraryX header{padding:14px}';
+            try{var target=document.head||document.documentElement;if(target)target.appendChild(st);else{document.addEventListener('DOMContentLoaded',function(){var t=document.head||document.documentElement;if(t)t.appendChild(st);});}}catch(e){}
+        """
+        private const val AMOLED_THEME = """
+            (function(){
+                var aled=document.createElement('style');
+                aled.textContent='.encore-dark-theme{--background-base:#000;--background-highlight:#000;--background-elevated-base:#000;--background-elevated-highlight:#000;--background-elevated-press:#000;--background-tinted-base:#000} aside[data-testid=now-playing-bar]{background:#000!important;box-shadow:none;border-top:1px solid #666}';
+                document.head.appendChild(aled);
+            })();
+        """
+
+        private fun isAnalyticsDomain(url: String): Boolean {
+            return url.contains("doubleclick.net") ||
+                    url.contains("googlesyndication.com") ||
+                    url.contains("fastly-insights.com") ||
+                    url.contains("sentry.io")
+        }
+
+        private fun isAudioWhitelisted(url: String): Boolean {
+            return url.contains("podz-content") ||
+                    url.contains("gew4-spclient")
+        }
+
+        private fun isKnownAudioCdn(url: String): Boolean {
+            return url.contains("akamaized.net/audio/") ||
+                    url.contains("scdn.co/audio/") ||
+                    url.contains("scdn.co/mp3-ad/") ||
+                    url.contains("spotifycdn.com/audio/") ||
+                    url.contains("amillionads.com") ||
+                    url.contains("2mdn.net") ||
+                    url.contains("adxcel.com") ||
+                    url.contains("adstudio-assets.scdn.co")
+        }
+    }
+}
