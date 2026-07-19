@@ -105,11 +105,13 @@ class SpotifyWebViewClient(
     private fun injectPlayerControl(view: WebView) {
         val prefs = view.context.getSharedPreferences("spotilol_prefs", 0)
         val autoPlayMode = prefs.getString("APlayMode", "disabled") ?: "disabled"
+        val closeNowPlay = prefs.getBoolean("CloseNowPlay", true)
         val amoledEnabled = prefs.getBoolean("AmoledTheme", false)
         val customCss = prefs.getString("CustomCss", "") ?: ""
 
         val js = buildString {
             append("window.autoPlayMode='$autoPlayMode';\n")
+            append("window.closeNowPlay=$closeNowPlay;\n")
             append(BASE_PLAYER_VARS)
             append(MEDIA_UPDATER)
             append(LIBRARY_FETCHER)
@@ -460,6 +462,19 @@ class SpotifyWebViewClient(
                         AndBridge.wakeOff();
                     }
 
+                    if(typeof npBtn=='undefined') {
+                        var lyBtn = document.querySelector('button[data-testid=lyrics-button]:not(.fuckd)');
+                        if(lyBtn) {
+                            lyBtn.classList.add('fuckd');
+                            npBtn = document.createElement('button');
+                            npBtn.className = 'npbtn';
+                            npBtn.onclick = clickNP;
+                            npBtn.innerHTML = '<svg viewBox="0 0 16 17"><rect x="1" y="0.75" width="14" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M 6 5 L 6 5.9160156 L 9.6933594 8.5 L 6 11.080078 L 6 12 L 11 8.5 L 6 5 z" stroke="currentColor" stroke-width="1.2"/></svg>';
+                            lyBtn.parentNode.insertBefore(npBtn, lyBtn);
+                            closeNowPlay();
+                        }
+                    }
+
                     var pb = document.querySelector('aside button[data-testid=control-button-playpause]:not(.fuckd)');
                     if(pb) {
                         AndBridge.playLoaded();
@@ -507,7 +522,7 @@ class SpotifyWebViewClient(
                 }
                 if(afint) clearInterval(afint);
                 afint = setInterval(function(){
-                    closeNowPlay();
+                    if(window.closeNowPlay) closeNowPlay();
                     var ft = document.querySelector('aside div.encore-bright-accent-set button');
                     if(ft) {
                         ft.click();
