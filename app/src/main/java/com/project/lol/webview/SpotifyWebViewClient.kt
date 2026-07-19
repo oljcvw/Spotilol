@@ -111,7 +111,7 @@ class SpotifyWebViewClient(
 
         val js = buildString {
             append("window.autoPlayMode='$autoPlayMode';\n")
-            append("window.closeNowPlay=$closeNowPlay;\n")
+            append("window.closeNpPref=$closeNowPlay;\n")
             append(BASE_PLAYER_VARS)
             append(MEDIA_UPDATER)
             append(LIBRARY_FETCHER)
@@ -522,7 +522,7 @@ class SpotifyWebViewClient(
                 }
                 if(afint) clearInterval(afint);
                 afint = setInterval(function(){
-                    if(window.closeNowPlay) closeNowPlay();
+                    if(window.closeNpPref) closeNowPlay();
                     var ft = document.querySelector('aside div.encore-bright-accent-set button');
                     if(ft) {
                         ft.click();

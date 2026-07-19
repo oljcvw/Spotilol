@@ -30,10 +30,10 @@ class SpotifyBridge(activityRef: WeakReference<Activity>) {
     @JavascriptInterface
     fun deferMessage(msg: String?) {
         val activity = activityRef.get() ?: return
+        if (msg == "adblock") return
         val display = when (msg) {
             "unlock" -> "Player unlocked"
             "reload" -> "Reloading..."
-            "adblock" -> "Ad blocked"
             else -> msg
         }
         activity.runOnUiThread {

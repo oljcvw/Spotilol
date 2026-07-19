@@ -309,7 +309,7 @@ class MainActivity : ComponentActivity() {
 
         webView?.let { view ->
             val js = buildString {
-                append("window.closeNowPlay=$closeNowPlay;\n")
+                append("window.closeNpPref=$closeNowPlay;\n")
                 append(SpotifyWebViewClient.buildAmoledJs(amoledEnabled))
                 append("\n")
                 append(SpotifyWebViewClient.buildCustomCssJs(customCss))
