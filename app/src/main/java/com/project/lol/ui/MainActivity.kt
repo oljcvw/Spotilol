@@ -57,6 +57,7 @@ import com.project.lol.proxy.LocalProxyManager
 import com.project.lol.service.MediaNotificationService
 import com.project.lol.webview.SpotifyWebChromeClient
 import com.project.lol.ui.theme.SpotifyTheme
+import com.project.lol.update.UpdateChecker
 import com.project.lol.webview.SpotifyWebViewClient
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executors
@@ -81,6 +82,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         requestNotificationPermission()
+        UpdateChecker(this).autoCheck()
 
         val prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
         val loggedIn = prefs.getBoolean("LoggedIn", false)

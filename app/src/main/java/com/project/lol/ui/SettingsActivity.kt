@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -92,6 +93,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.webkit.WebViewCompat
 import com.project.lol.proxy.LocalProxyManager
+import com.project.lol.update.UpdateChecker
 
 @OptIn(ExperimentalMaterial3Api::class)
 class SettingsActivity : ComponentActivity() {
@@ -377,6 +379,20 @@ fun SettingsScreen(
                 )
             }
 
+            // Updates Section
+            val updateContext = LocalContext.current
+            SettingSectionCard(
+                title = "UPDATES",
+                icon = Icons.Default.SystemUpdate
+            ) {
+                SettingTile(
+                    title = "Check for Updates",
+                    subtitle = "Manually check for new releases",
+                    icon = Icons.Default.SystemUpdate,
+                    onClick = { UpdateChecker(updateContext).manualCheck() }
+                )
+            }
+
             // About Section
             val context = LocalContext.current
             val pkg = remember { WebViewCompat.getCurrentWebViewPackage(context) }
@@ -421,6 +437,16 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = "Developed by lyssadev & reversed Spotifuck app by Deviato.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(Modifier.height(8.dp))
         }
     }
 

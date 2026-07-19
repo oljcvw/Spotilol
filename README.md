@@ -93,4 +93,4 @@ spotilol exists because deviato did the reverse-engineering work on spotifuck.
 this ports the core logic from smali to kotlin with extra features and
 maintenance.
 
-**pen-sourced by lyssadev <3 deviato**
+**Open-sourced by lyssadev <3 deviato**
