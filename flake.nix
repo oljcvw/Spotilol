@@ -38,7 +38,6 @@
 
           shellHook = ''
             export PATH="$ANDROID_HOME/platform-tools:$PATH"
-            fi
           '';
         };
       });
