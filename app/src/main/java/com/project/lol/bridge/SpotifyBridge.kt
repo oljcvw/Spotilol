@@ -14,6 +14,7 @@ class SpotifyBridge(activityRef: WeakReference<Activity>) {
     var onPlayLoaded: (() -> Unit)? = null
     var onMediaStatus: ((String) -> Unit)? = null
     var onMediaPosition: ((Long) -> Unit)? = null
+    var onTimerDialogRequest: (() -> Unit)? = null
 
     @JavascriptInterface
     fun loginDetected() {
@@ -87,5 +88,13 @@ class SpotifyBridge(activityRef: WeakReference<Activity>) {
 
     @JavascriptInterface
     fun manageTSleep(enabled: Boolean) {
+    }
+
+    @JavascriptInterface
+    fun openTimerDialog() {
+        val activity = activityRef.get() ?: return
+        activity.runOnUiThread {
+            onTimerDialogRequest?.invoke()
+        }
     }
 }

@@ -39,6 +39,14 @@ class SpotifyWebViewClient(
         }
 
         injectPlayerControl(view)
+
+        view.evaluateJavascript(LOGOUT_CHECK_JS) { result ->
+            if (result == "\"out\"") {
+                view.context.getSharedPreferences("spotilol_prefs", 0)
+                    .edit().putBoolean("LoggedIn", false).apply()
+                view.loadUrl("https://accounts.spotify.com/login")
+            }
+        }
     }
 
     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -121,6 +129,7 @@ class SpotifyWebViewClient(
             append(AUTO_FEATURES)
             append(ANDROID_AUTO_TRACKER)
             append(CSS_JS_HACK)
+            append(CUSTOM_PLAYER)
         }
         val cleanJs = stripConsoleLogs(js) + "\n" +
                 buildAmoledJs(amoledEnabled) + "\n" +
@@ -157,6 +166,19 @@ class SpotifyWebViewClient(
                     cl.style.cssText = 'display:block;padding:10px;margin:10px 0;color:white;font-weight:bold;text-decoration:none;border:1px solid #ddd;background:#339;border-radius:30px';
                     cl.href = '?allow_password=1';
                     gl.parentNode.insertBefore(cl, gl);
+                }
+            })();
+        """
+
+        const val LOGOUT_CHECK_JS = """
+            (function(){
+                var s = document.getElementById('appServerConfig');
+                if(!s) return 'skip';
+                try {
+                    var d = JSON.parse(atob(s.textContent.trim()));
+                    return d.isAnonymous ? 'out' : 'in';
+                } catch(e) {
+                    return 'skip';
                 }
             })();
         """
@@ -464,13 +486,20 @@ class SpotifyWebViewClient(
 
                     if(typeof npBtn=='undefined') {
                         var lyBtn = document.querySelector('button[data-testid=lyrics-button]:not(.fuckd)');
-                        if(lyBtn) {
-                            lyBtn.classList.add('fuckd');
+                        var queueBtn = document.querySelector('button[data-testid=control-button-queue]:not(.fuckd)');
+                        var anchorBtn = lyBtn || queueBtn;
+                        if(anchorBtn) {
+                            if(anchorBtn === lyBtn) lyBtn.classList.add('fuckd');
                             npBtn = document.createElement('button');
                             npBtn.className = 'npbtn';
                             npBtn.onclick = clickNP;
                             npBtn.innerHTML = '<svg viewBox="0 0 16 17"><rect x="1" y="0.75" width="14" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M 6 5 L 6 5.9160156 L 9.6933594 8.5 L 6 11.080078 L 6 12 L 11 8.5 L 6 5 z" stroke="currentColor" stroke-width="1.2"/></svg>';
-                            lyBtn.parentNode.insertBefore(npBtn, lyBtn);
+                            window.timerBtn = document.createElement('button');
+                            timerBtn.className = 'npbtn';
+                            timerBtn.onclick = function(){ AndBridge.openTimerDialog(); };
+                            timerBtn.innerHTML = '<svg viewBox="0 0 20 20" width="16" height="16"><path fill="currentColor" d="M16.32 7.1A8 8 0 1 1 9 4.06V2h2v2.06c1.46.18 2.8.76 3.9 1.62l1.46-1.46l1.42 1.42l-1.46 1.45zM10 18a6 6 0 1 0 0-12a6 6 0 0 0 0 12zM7 0h6v2H7V0zm5.12 8.46l1.42 1.42L10 13.4L8.59 12l3.53-3.54z"/></svg>';
+                            anchorBtn.before(npBtn);
+                            npBtn.before(timerBtn);
                             closeNowPlay();
                         }
                     }
@@ -612,16 +641,187 @@ class SpotifyWebViewClient(
                     var sr=document.querySelector('input[data-testid=search-input]:not(.fuckd)');
                     if(sr){
                         sr.classList.add('fuckd');
-                        sr.addEventListener('focus',function(){var npb=document.querySelector('aside[data-testid=now-playing-bar]');if(npb) npb.style.display='none';closeNowPlay();});
-                        sr.addEventListener('blur',function(){var npb=document.querySelector('aside[data-testid=now-playing-bar]');if(npb) npb.style.display='flex';});
+                        sr.addEventListener('keydown',function(e){if(e.key==='Enter'){closeNowPlay();}});
+                    }
+                    var sdd=document.getElementById('search-dropdown');
+                    if(sdd && !sdd.classList.contains('fuckd')){
+                        sdd.classList.add('fuckd');
+                        sdd.addEventListener('click',function(e){
+                            var t=e.target.closest('a[href*="/track/"]');
+                            if(t) closeNowPlay();
+                        },true);
                     }
                     var ub=document.querySelector('button[data-testid=user-widget-link]:not(.fuckd)');
                     if(ub){ub.classList.add('fuckd');ub.addEventListener('click',function(){closeNowPlay();});}
                 },5000);
             };
             var st=document.createElement('style');
-            st.textContent='body{min-width:100%!important;min-height:100%!important} .os-scrollbar{--os-size:6px!important} .contentSpacing{padding:0} div[data-testid=root]{--panel-gap:0!important} #main-view+div,#main-view+div>div{overflow:hidden!important;width:auto} #main-view+div>div>div>div:nth-child(2)>div{width:100vw!important} div[data-encore-id=banner],#global-nav-bar>div:first-of-type,#global-nav-bar a[href="/download"],button[data-testid=fullscreen-mode-button],div.main-view-container__mh-footer-container{display:none!important} section[data-testid=artist-page]>div>div:first-child:not([data-encore-id]){height:25vh} div[data-testid=tracklist-row]{padding:0 10px 0 0;grid-gap:0} div[data-testid=tracklist-row] button:not([data-testid=add-to-playlist-button]){transform:scale(1.3)!important;opacity:0.6!important} div[data-testid=tracklist-row] button:{-webkit-margin-end:0!important} div[data-testid=tracklist-row] button:hover{color:#2d6!important} div[data-testid=tracklist-row]>div:first-child>div:first-child{height:24px;min-height:24px;min-width:24px;margin:0 8px!important} [aria-colcount="3"] div[data-testid=tracklist-row]{grid-template-columns:[index] var(--tracklist-index-column-width,40px) [first] minmax(120px,var(--col1,4fr)) [last] minmax(82px,var(--col2,1fr))!important} [aria-colcount="4"] div[data-testid=tracklist-row]{grid-template-columns:[index] var(--tracklist-index-column-width,40px) [first] minmax(120px,var(--col1,4fr)) [var1] minmax(120px,var(--col2,2fr)) [last] minmax(82px,var(--col3,1fr))!important} [aria-colcount="5"] div[data-testid=tracklist-row]{grid-template-columns:[index] var(--tracklist-index-column-width,40px) [first] minmax(120px,var(--col1,6fr)) [var1] minmax(120px,var(--col2,4fr)) [var2] minmax(120px,var(--col3,3fr)) [last] minmax(82px,var(--col4,1fr))!important} section[data-testid=track-page]>div.contentSpacing>div:nth-child(2) [aria-colcount="2"] div[data-testid=tracklist-row]{grid-template-columns:[first] minmax(120px,var(--col0,4fr)) [last] minmax(82px,var(--col1,1fr))!important} section[data-testid=track-page]>div.contentSpacing>div:nth-child(2) [aria-colcount="3"] div[data-testid=tracklist-row]{grid-template-columns:[first] minmax(120px,var(--col0,4fr)) [var1] minmax(120px,var(--col1,2fr)) [last] minmax(82px,var(--col2,1fr))!important} .npbtn{cursor:pointer;color:#b3b3b3;background:transparent;border:none;width:32px;height:32px;padding:8px} .npbtn.active{color:#FFFFFF} *{--content-spacing:10px} section[data-testid=home-page] .contentSpacing{padding:0 10px!important;overflow:hidden} section[data-testid=home-page] section:not([data-testid]){display:none!important} div[data-testid=grid-container]{margin-inline:0!important;column-gap:0!important;overflow:hidden!important} div[data-testid=action-bar-row],div[data-testid=topbar-content]{padding:5px 10px} div[data-testid=track-list]>div:first-child,div[data-testid=playlist-tracklist]>div:first-child{margin:0!important;padding:0!important} main>section:not([data-testid=artist-page])>div:first-child{height:auto!important;min-height:auto!important;padding:10px} section[data-testid=track-page]>div>div.contentSpacing>div:last-child{overflow:hidden} section[data-testid=artist-page]>div>div:first-child>div.contentSpacing{padding:10px} section[data-testid=artist-page] div[data-testid=grid-container] h2,section[data-testid=artist-page] section[data-testid=component-shelf]{padding:0 10px} main>section h1.encore-text-headline-large{font-size:22px!important} section[data-testid=artist-page] span.encore-text-headline-large{font-size:26px!important} section[data-testid=track-page] h1{font-size:20px!important} aside[data-testid=now-playing-bar]{min-width:100%!important;box-shadow:none!important;background:#000000!important} aside[data-testid=now-playing-bar]>div:first-child{margin-top:2px;flex-direction:column!important;height:auto!important} aside[data-testid=now-playing-bar]>div>div{width:100%!important} aside[data-testid=now-playing-bar]>div>div:last-child>div{min-height:32px;margin:5px 10px} aside[data-testid=now-playing-bar]>div>div:last-child button{transform:scale(1.15);margin:0 5px} div[data-testid=general-controls]{margin:15px 0 25px} div[data-testid=general-controls] button{transform:scale(1.4)!important;margin:0 8px!important} div[data-testid=player-controls]{margin:5px 0} div[data-testid=now-playing-widget]{justify-content:center;overflow:hidden} form[role=search]{z-index:10;margin-left:48px;max-width:88%} div[data-testid=now-playing-widget]>div:last-child>button{transform:scale(1.3)} div[data-testid=now-playing-widget]>div:first-child{display:none!important} div[data-testid=now-playing-widget]>div:nth-child(2){display:flex!important;overflow:hidden!important} div[data-testid=now-playing-widget]>div:nth-child(2) span{font-size:13px!important;height:20px!important;margin:0!important} div[data-testid=now-playing-widget]>div:nth-child(2)>div{min-width:auto;max-width:66%} [data-tippy-root]{overflow:hidden!important} [data-tippy-root],[data-tippy-root] *{transition:none!important;transform:none!important} div[data-testid=hover-or-focus-tooltip],#Desktop_LeftSidebar_Id header>div>div:last-child{display:none!important} #Desktop_LeftSidebar_Id>nav>div{min-height:48px;border-radius:25px} .YourLibraryX{overflow:hidden;background:var(--background-elevated-base)!important} .YourLibraryX header{padding:14px}';
+            st.textContent='body{min-width:100%!important;min-height:100%!important} .os-scrollbar{--os-size:6px!important} .contentSpacing{padding:0} div[data-testid=root]{--panel-gap:0!important} #main-view+div,#main-view+div>div{overflow:hidden!important;width:auto} #main-view+div>div>div>div:nth-child(2)>div{width:100vw!important} div[data-encore-id=banner],#global-nav-bar>div:first-of-type,#global-nav-bar a[href="/download"],button[data-testid=fullscreen-mode-button],button[data-testid=friend-activity-button],div.main-view-container__mh-footer-container,li:has(>a[href*="spotify.com/premium"]),li:has(>a[href*="support.spotify.com"]),li:has(>a[href*="spotify.com/download"]){display:none!important} aside[data-testid="now-playing-bar"]{display:none!important} #spotilolPlayerControls{position:fixed;bottom:12px;left:12px;right:12px;z-index:9999;display:flex;flex-direction:column;padding:12px 14px 14px;background:rgba(24,24,24,.92);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,.06);border-radius:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#fff;box-shadow:0 8px 32px rgba(0,0,0,.6)} #spotilolPlayerControls .spl-top{display:flex;align-items:center;gap:10px;margin-bottom:8px} #spotilolPlayerControls .spl-cover{flex-shrink:0} #spotilolPlayerControls .spl-cover img{width:48px;height:48px;border-radius:10px;object-fit:cover;background:#282828} #spotilolPlayerControls .spl-info{flex:1;min-width:0;overflow:hidden} #spotilolPlayerControls .spl-track{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;transition:color .15s;cursor:pointer} #spotilolPlayerControls .spl-track:hover{color:#1db954} #spotilolPlayerControls .spl-artist{font-size:12px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;transition:color .15s;cursor:pointer} #spotilolPlayerControls .spl-artist:hover{color:#1db954} #spotilolPlayerControls .spl-row2{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px} #spotilolPlayerControls .spl-actions-left{display:flex;align-items:center;gap:2px} #spotilolPlayerControls .spl-liked-btn{color:rgba(255,255,255,.7)!important;position:relative} #spotilolPlayerControls .spl-liked-btn.spl-active{color:#1db954!important} #spotilolPlayerControls .spl-btn{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;padding:8px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:color .15s,background .15s} #spotilolPlayerControls .spl-btn:hover{color:#fff;background:rgba(255,255,255,.1)} #spotilolPlayerControls .spl-btn-sm{padding:6px} #spotilolPlayerControls .spl-active{color:#1db954} #spotilolPlayerControls .spl-bottom{display:flex;align-items:center;gap:8px;width:100%;margin-bottom:6px} #spotilolPlayerControls .spl-time{font-size:10px;color:rgba(255,255,255,.45);min-width:30px;text-align:center;font-variant-numeric:tabular-nums} #spotilolPlayerControls .spl-bar-wrap{flex:1;position:relative;height:14px;display:flex;align-items:center} #spotilolPlayerControls .spl-bar{width:100%;height:4px;background:rgba(255,255,255,.12);border-radius:2px;cursor:pointer;position:relative} #spotilolPlayerControls .spl-fill{height:100%;background:#1db954;border-radius:2px;transition:width .4s linear;width:0%;position:relative} #spotilolPlayerControls .spl-handle{position:absolute;top:50%;width:12px;height:12px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);left:0%;opacity:0;transition:opacity .15s;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.5)} #spotilolPlayerControls .spl-bar-wrap:hover .spl-handle{opacity:1} #spotilolPlayerControls .spl-transport{display:flex;align-items:center;justify-content:center;gap:16px;padding:2px 0} #spotilolPlayerControls .spl-play{background:rgba(255,255,255,.1)!important;color:#fff!important;padding:10px!important} #spotilolPlayerControls .spl-play:hover{background:rgba(255,255,255,.2)!important} @media(max-width:420px){#spotilolPlayerControls{bottom:8px;left:8px;right:8px;padding:8px 10px 10px;border-radius:14px} #spotilolPlayerControls .spl-cover img{width:42px;height:42px;border-radius:8px} #spotilolPlayerControls .spl-track{font-size:13px} #spotilolPlayerControls .spl-artist{font-size:11px} #spotilolPlayerControls .spl-actions-left{gap:0} #spotilolPlayerControls .spl-btn-sm{padding:5px} #spotilolPlayerControls .spl-transport{gap:12px} #spotilolPlayerControls .spl-play{padding:8px!important}} section[data-testid=artist-page]>div>div:first-child:not([data-encore-id]){height:25vh} div[data-testid=tracklist-row]{padding:0 10px 0 0;grid-gap:0} div[data-testid=tracklist-row] button:not([data-testid=add-to-playlist-button]){transform:scale(1.3)!important;opacity:0.6!important} div[data-testid=tracklist-row] button:{-webkit-margin-end:0!important} div[data-testid=tracklist-row] button:hover{color:#2d6!important} div[data-testid=tracklist-row]>div:first-child>div:first-child{height:24px;min-height:24px;min-width:24px;margin:0 8px!important} [aria-colcount="3"] div[data-testid=tracklist-row]{grid-template-columns:[index] var(--tracklist-index-column-width,40px) [first] minmax(120px,var(--col1,4fr)) [last] minmax(82px,var(--col2,1fr))!important} [aria-colcount="4"] div[data-testid=tracklist-row]{grid-template-columns:[index] var(--tracklist-index-column-width,40px) [first] minmax(120px,var(--col1,4fr)) [var1] minmax(120px,var(--col2,2fr)) [last] minmax(82px,var(--col3,1fr))!important} [aria-colcount="5"] div[data-testid=tracklist-row]{grid-template-columns:[index] var(--tracklist-index-column-width,40px) [first] minmax(120px,var(--col1,6fr)) [var1] minmax(120px,var(--col2,4fr)) [var2] minmax(120px,var(--col3,3fr)) [last] minmax(82px,var(--col4,1fr))!important} section[data-testid=track-page]>div.contentSpacing>div:nth-child(2) [aria-colcount="2"] div[data-testid=tracklist-row]{grid-template-columns:[first] minmax(120px,var(--col0,4fr)) [last] minmax(82px,var(--col1,1fr))!important} section[data-testid=track-page]>div.contentSpacing>div:nth-child(2) [aria-colcount="3"] div[data-testid=tracklist-row]{grid-template-columns:[first] minmax(120px,var(--col0,4fr)) [var1] minmax(120px,var(--col1,2fr)) [last] minmax(82px,var(--col2,1fr))!important} .npbtn{cursor:pointer;color:#b3b3b3;background:transparent;border:none;width:32px;height:32px;padding:8px} .npbtn.active{color:#FFFFFF} *{--content-spacing:10px} section[data-testid=home-page] .contentSpacing{padding:0 10px!important;overflow:hidden} [data-shelf-collapsable="true"]{display:none!important} div[data-testid=grid-container]{margin-inline:0!important;column-gap:0!important;overflow:hidden!important} div[data-testid=action-bar-row],div[data-testid=topbar-content]{padding:5px 10px} div[data-testid=track-list]>div:first-child,div[data-testid=playlist-tracklist]>div:first-child{margin:0!important;padding:0!important} main>section:not([data-testid=artist-page])>div:first-child{height:auto!important;min-height:auto!important;padding:10px} section[data-testid=track-page]>div>div.contentSpacing>div:last-child{overflow:hidden} section[data-testid=artist-page]>div>div:first-child>div.contentSpacing{padding:10px} section[data-testid=artist-page] div[data-testid=grid-container] h2,section[data-testid=artist-page] section[data-testid=component-shelf]{padding:0 10px} main>section h1.encore-text-headline-large{font-size:22px!important} section[data-testid=artist-page] span.encore-text-headline-large{font-size:26px!important} section[data-testid=track-page] h1{font-size:20px!important} aside[data-testid=now-playing-bar]{min-width:100%!important;box-shadow:none!important;background:#000000!important} aside[data-testid=now-playing-bar]>div:first-child{margin-top:2px;flex-direction:column!important;height:auto!important} aside[data-testid=now-playing-bar]>div>div{width:100%!important} aside[data-testid=now-playing-bar]>div>div:last-child>div{min-height:32px;margin:5px 10px} aside[data-testid=now-playing-bar]>div>div:last-child button{transform:scale(1.15);margin:0 5px} div[data-testid=general-controls]{margin:15px 0 25px} div[data-testid=general-controls] button{transform:scale(1.4)!important;margin:0 8px!important} div[data-testid=player-controls]{margin:5px 0} div[data-testid=now-playing-widget]{justify-content:center;overflow:hidden} form[role=search]{z-index:10;margin-left:48px;max-width:88%} div[data-testid=now-playing-widget]>div:last-child>button{transform:scale(1.3)} div[data-testid=now-playing-widget]>div:first-child{display:none!important} div[data-testid=now-playing-widget]>div:nth-child(2){display:flex!important;overflow:hidden!important} div[data-testid=now-playing-widget]>div:nth-child(2) span{font-size:13px!important;height:20px!important;margin:0!important} div[data-testid=now-playing-widget]>div:nth-child(2)>div{min-width:auto;max-width:66%} [data-tippy-root]{overflow:hidden!important} [data-tippy-root],[data-tippy-root] *{transition:none!important;transform:none!important} div[data-testid=hover-or-focus-tooltip],#Desktop_LeftSidebar_Id header>div>div:last-child{display:none!important} #Desktop_LeftSidebar_Id>nav>div{min-height:48px;border-radius:25px} .YourLibraryX{overflow:hidden;background:var(--background-elevated-base)!important} .YourLibraryX header{padding:14px} #spotilolPlayerControls .spl-disabled{opacity:.3!important;pointer-events:none}';
             try{var target=document.head||document.documentElement;if(target)target.appendChild(st);else{document.addEventListener('DOMContentLoaded',function(){var t=document.head||document.documentElement;if(t)t.appendChild(st);});}}catch(e){}
+        """
+
+        private const val CUSTOM_PLAYER = """
+            window.initSpotilolPlayer=function(){
+                if(document.getElementById('spotilolPlayerControls')) return;
+                var npb=document.querySelector('aside[data-testid="now-playing-bar"]');
+                if(!npb) return;
+                npb.style.display='none';
+
+                var pl=document.createElement('div');
+                pl.id='spotilolPlayerControls';
+                pl.innerHTML=''
+                    +'<div class="spl-top">'
+                    +'<div class="spl-cover"><img id="spl-cover-img" src="" alt=""></div>'
+                    +'<div class="spl-info"><div class="spl-track" id="spl-track">No track</div>'
+                    +'<div class="spl-artist" id="spl-artist">\u2014</div></div>'
+                    +'</div>'
+                    +'<div class="spl-row2">'
+                    +'<div class="spl-actions-left">'
+                    +'<button class="spl-btn spl-btn-sm" id="spl-timer" aria-label="Timer"><svg viewBox="0 0 20 20" width="14" height="14"><path fill="currentColor" d="M16.32 7.1A8 8 0 1 1 9 4.06V2h2v2.06c1.46.18 2.8.76 3.9 1.62l1.46-1.46l1.42 1.42l-1.46 1.45zM10 18a6 6 0 1 0 0-12a6 6 0 0 0 0 12zM7 0h6v2H7V0zm5.12 8.46l1.42 1.42L10 13.4L8.59 12l3.53-3.54z"/></svg></button>'
+                    +'<button class="spl-btn spl-btn-sm" id="spl-nptoggle" aria-label="Now Playing"><svg viewBox="0 0 16 17" width="14" height="14"><rect x="1" y="0.75" width="14" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M 6 5 L 6 5.9160156 L 9.6933594 8.5 L 6 11.080078 L 6 12 L 11 8.5 L 6 5 z" stroke="currentColor" stroke-width="1.2"/></svg></button>'
+                    +'<button class="spl-btn spl-btn-sm" id="spl-lyrics" aria-label="Lyrics"><svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M13.426 2.574a2.831 2.831 0 0 0-4.797 1.55l3.247 3.247a2.831 2.831 0 0 0 1.55-4.797M10.5 8.118l-2.619-2.62L4.74 9.075 2.065 12.12a1.287 1.287 0 0 0 1.816 1.816l3.06-2.688 3.56-3.129zM7.12 4.094a4.331 4.331 0 1 1 4.786 4.786l-3.974 3.493-3.06 2.689a2.787 2.787 0 0 1-3.933-3.933l2.676-3.045z"/></svg></button>'
+                    +'<button class="spl-btn spl-btn-sm" id="spl-queue" aria-label="Queue"><svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M15 15H1v-1.5h14zm0-4.5H1V9h14zm-14-7A2.5 2.5 0 0 1 3.5 1h9a2.5 2.5 0 0 1 0 5h-9A2.5 2.5 0 0 1 1 3.5m2.5-1a1 1 0 0 0 0 2h9a1 1 0 1 0 0-2z"/></svg></button>'
+                    +'<button class="spl-btn spl-btn-sm" id="spl-vol" aria-label="Volume"><svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M9.741.85a.75.75 0 0 1 .375.65v13a.75.75 0 0 1-1.125.65l-6.925-4a3.64 3.64 0 0 1-1.33-4.967 3.64 3.64 0 0 1 1.33-1.332l6.925-4a.75.75 0 0 1 .75 0zm-6.924 5.3a2.14 2.14 0 0 0 0 3.7l5.8 3.35V2.8zm8.683 4.29V5.56a2.75 2.75 0 0 1 0 4.88"/><path fill="currentColor" d="M11.5 13.614a5.752 5.752 0 0 0 0-11.228v1.55a4.252 4.252 0 0 1 0 8.127z"/></svg></button>'
+                    +'</div>'
+                    +'<button class="spl-btn spl-btn-sm spl-liked-btn" id="spl-liked" aria-label="Like"><svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M15.724 4.22A4.313 4.313 0 0 0 12.192.814a4.269 4.269 0 0 0-3.622 1.13.837.837 0 0 1-1.14 0 4.272 4.272 0 0 0-6.38 5.69l5.4 6.06a1.09 1.09 0 0 0 1.504.06l5.397-5.892a4.32 4.32 0 0 0 1.253-3.436z"/></svg></button>'
+                    +'</div>'
+                    +'<div class="spl-bottom">'
+                    +'<span class="spl-time" id="spl-pos">0:00</span>'
+                    +'<div class="spl-bar-wrap"><div class="spl-bar" id="spl-bar"><div class="spl-fill" id="spl-fill"></div><div class="spl-handle" id="spl-handle"></div></div></div>'
+                    +'<span class="spl-time" id="spl-dur">0:00</span>'
+                    +'</div>'
+                    +'<div class="spl-transport">'
+                    +'<button class="spl-btn spl-btn-sm" id="spl-shuffle" aria-label="Shuffle"><svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M13.151.922a.75.75 0 1 0-1.06 1.06L13.109 3H11.16a3.75 3.75 0 0 0-2.873 1.34l-6.173 7.356A2.25 2.25 0 0 1 .39 12.5H0V14h.391a3.75 3.75 0 0 0 2.873-1.34l6.173-7.356a2.25 2.25 0 0 1 1.724-.804h1.947l-1.017 1.018a.75.75 0 0 0 1.06 1.06L15.98 3.75zM.391 3.5H0V2h.391c1.109 0 2.16.49 2.873 1.34L4.89 5.277l-.979 1.167-1.796-2.14A2.25 2.25 0 0 0 .39 3.5zm7.758 6.22l.979-1.167 1.35 1.605a2.25 2.25 0 0 0 1.724.804h1.947l-1.017-1.018a.75.75 0 1 1 1.06-1.06l2.829 2.828-2.829 2.828a.75.75 0 1 1-1.06-1.06L13.109 13H11.16a3.75 3.75 0 0 1-2.873-1.34l-1.138-1.94z"/></svg></button>'
+                    +'<button class="spl-btn" id="spl-prev" aria-label="Previous"><svg viewBox="0 0 16 16" width="18" height="18"><path fill="currentColor" d="M3.3 1a.7.7 0 0 1 .7.7v5.15l9.95-5.744a.7.7 0 0 1 1.05.606v12.575a.7.7 0 0 1-1.05.607L4 9.149V14.3a.7.7 0 0 1-.7.7H1.7a.7.7 0 0 1-.7-.7V1.7a.7.7 0 0 1 .7-.7z"/></svg></button>'
+                    +'<button class="spl-btn spl-play" id="spl-play" aria-label="Play"><svg viewBox="0 0 16 16" width="22" height="22"><path fill="currentColor" d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288z"/></svg></button>'
+                    +'<button class="spl-btn" id="spl-next" aria-label="Next"><svg viewBox="0 0 16 16" width="18" height="18"><path fill="currentColor" d="M12.7 1a.7.7 0 0 0-.7.7v5.15L2.05 1.107A.7.7 0 0 0 1 1.712v12.575a.7.7 0 0 0 1.05.607L12 9.149V14.3a.7.7 0 0 0 .7.7h1.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/></svg></button>'
+                    +'<button class="spl-btn spl-btn-sm" id="spl-repeat" aria-label="Repeat"><svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5A2.25 2.25 0 0 0 1.5 4.75v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75z"/></svg></button>'
+                    +'</div>';
+
+                document.body.appendChild(pl);
+
+                document.getElementById('spl-prev').onclick=function(){actSkipBack()};
+                document.getElementById('spl-next').onclick=function(){actSkipForward()};
+                document.getElementById('spl-play').onclick=function(){var pb=document.querySelector('button[data-testid=control-button-playpause]');actPlayPause(pb&&pb.getAttribute('aria-label')==='Play')};
+                document.getElementById('spl-shuffle').onclick=function(){var sb=document.querySelector('button[data-testid=control-button-shuffle]');if(sb)sb.click()};
+                document.getElementById('spl-repeat').onclick=function(){actRepeat()};
+                document.getElementById('spl-lyrics').onclick=function(){if(this.classList.contains('spl-disabled'))return;if(typeof closeNowPlay==='function') closeNowPlay();var lb=document.querySelector('button[data-testid=lyrics-button]');if(lb&&!lb.disabled)lb.click()};
+                document.getElementById('spl-queue').onclick=function(){var qb=document.querySelector('button[data-testid=control-button-queue]');if(qb)qb.click()};
+                document.getElementById('spl-vol').onclick=function(){var vb=document.querySelector('button[data-testid=volume-bar-toggle-mute-button]');if(vb)vb.click()};
+                document.getElementById('spl-nptoggle').onclick=function(){clickNP()};
+                document.getElementById('spl-timer').onclick=function(){AndBridge.openTimerDialog()};
+                document.getElementById('spl-liked').onclick=function(){actAddToFav()};
+
+                var splTrack=document.getElementById('spl-track');
+                var splArtist=document.getElementById('spl-artist');
+                splTrack.style.cursor='pointer';
+                splArtist.style.cursor='pointer';
+                splTrack.onclick=function(){
+                    if(typeof closeNowPlay==='function') closeNowPlay();
+                    var rl=document.querySelector('a[data-testid=context-item-link]');
+                    if(rl){rl.click();}
+                };
+                splArtist.onclick=function(){
+                    if(typeof closeNowPlay==='function') closeNowPlay();
+                    var al=document.querySelector('a[data-testid=context-item-info-artist]');
+                    if(!al) al=document.querySelector('a[data-testid=context-item-info-show]');
+                    if(al){al.click();}
+                };
+
+                var barEl=document.getElementById('spl-bar');
+                var dragging=false;
+                function seekTo(e){var r=barEl.getBoundingClientRect();var pct=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));var rg=document.querySelector('[data-testid="playback-progressbar"] input[type=range]');var mx=parseInt(rg?rg.getAttribute('max'):0)||1;actSeek(Math.round(pct*mx))}
+                barEl.addEventListener('mousedown',function(e){dragging=true;seekTo(e)});
+                barEl.addEventListener('touchstart',function(e){dragging=true;seekTo(e.touches[0])},{passive:true});
+                document.addEventListener('mousemove',function(e){if(dragging)seekTo(e)});
+                document.addEventListener('touchmove',function(e){if(dragging)seekTo(e.touches[0])},{passive:true});
+                document.addEventListener('mouseup',function(){dragging=false});
+                document.addEventListener('touchend',function(){dragging=false});
+
+                window.splUpdate=function(){
+                    var ci=document.getElementById('spl-cover-img');
+                    var tk=document.getElementById('spl-track');
+                    var ar=document.getElementById('spl-artist');
+                    var fl=document.getElementById('spl-fill');
+                    var hd=document.getElementById('spl-handle');
+                    var ps=document.getElementById('spl-pos');
+                    var ds=document.getElementById('spl-dur');
+                    var pp=document.getElementById('spl-play');
+                    var sh=document.getElementById('spl-shuffle');
+                    var rp=document.getElementById('spl-repeat');
+                    var lk=document.getElementById('spl-liked');
+                    var ly=document.getElementById('spl-lyrics');
+                    var tm=document.getElementById('spl-timer');
+
+                    var npb=document.querySelector('[data-testid="now-playing-widget"]');
+                    var imgEl=npb?npb.querySelector('img[data-testid="cover-art-image"]'):null;
+                    if(ci&&imgEl&&imgEl.src&&ci.src!==imgEl.src) ci.src=imgEl.src;
+
+                    var trackEl=document.querySelector('a[data-testid=context-item-link]');
+                    if(tk&&trackEl&&trackEl.textContent&&tk.textContent!==trackEl.textContent) tk.textContent=trackEl.textContent;
+
+                    var artistEl=document.querySelector('a[data-testid=context-item-info-artist]');
+                    if(!artistEl) artistEl=document.querySelector('a[data-testid=context-item-info-show]');
+                    if(ar&&artistEl&&tk.textContent!=='No track') ar.textContent=artistEl.textContent||'';
+
+                    var rg=document.querySelector('[data-testid="playback-progressbar"] input[type=range]');
+                    if(pp){
+                        var pb=document.querySelector('button[data-testid=control-button-playpause]');
+                        var isPlaying=pb&&pb.getAttribute('aria-label')!=='Play';
+                        pp.innerHTML=isPlaying
+                            ?'<svg viewBox="0 0 16 16" width="22" height="22"><path fill="currentColor" d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/></svg>'
+                            :'<svg viewBox="0 0 16 16" width="22" height="22"><path fill="currentColor" d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288z"/></svg>';
+                    }
+                    if(sh){
+                        var sb=document.querySelector('button[data-testid=control-button-shuffle]');
+                        sh.classList.toggle('spl-active',sb&&sb.getAttribute('aria-checked')==='true');
+                    }
+                    if(rp){
+                        var rr=document.querySelector('button[data-testid=control-button-repeat]');
+                        rp.classList.toggle('spl-active',rr&&rr.getAttribute('aria-checked')==='true');
+                    }
+                    if(lk){
+                        var fb=document.querySelector('div[data-testid=now-playing-widget]>div:last-child>button');
+                        var liked=fb&&fb.getAttribute('aria-checked')==='true';
+                        lk.classList.toggle('spl-active',liked===true);
+                    }
+                    var lb=document.querySelector('button[data-testid=lyrics-button]');
+                    if(lb){
+                        ly.style.display='';
+                        ly.classList.toggle('spl-disabled',lb.disabled||lb.getAttribute('aria-disabled')==='true');
+                    } else {
+                        ly.style.display='none';
+                    }
+                    if(tm) tm.classList.toggle('spl-active',typeof sleepTimerActive!=='undefined'&&sleepTimerActive&&sleepTimerActive.value);
+
+                    var pbEl=document.querySelector('[data-testid="playback-progressbar"] [data-testid="progress-bar"]');
+                    if(pbEl){
+                        var cs=getComputedStyle(pbEl);
+                        var tr=cs.getPropertyValue('--progress-bar-transform');
+                        if(tr){
+                            var pct=parseFloat(tr)||0;
+                            if(fl) fl.style.width=pct+'%';
+                            if(hd) hd.style.left=pct+'%';
+                        }
+                    }
+                    var posEl=document.querySelector('[data-testid="playback-position"]');
+                    var durEl=document.querySelector('[data-testid="playback-duration"]');
+                    if(ps&&posEl) ps.textContent=posEl.textContent;
+                    if(ds&&durEl) ds.textContent=durEl.textContent;
+                };
+                function formatTime(ms){
+                    var t=Math.floor(ms/1000);
+                    return Math.floor(t/60)+':'+(t%60<10?'0':'')+t%60;
+                }
+
+                setInterval(splUpdate,500);
+            };
+            if(document.readyState==='complete') initSpotilolPlayer();
+            else window.addEventListener('load',initSpotilolPlayer);
+            setInterval(function(){
+                var npb=document.querySelector('aside[data-testid="now-playing-bar"]');
+                if(npb&&npb.style.display!=='none') initSpotilolPlayer();
+            },3000);
         """
         fun buildAmoledJs(enabled: Boolean): String {
             return if (enabled) {

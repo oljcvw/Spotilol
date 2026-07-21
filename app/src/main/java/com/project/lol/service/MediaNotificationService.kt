@@ -24,6 +24,8 @@ import androidx.core.app.NotificationCompat
 import com.project.lol.R
 import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media.session.MediaButtonReceiver
+import android.bluetooth.BluetoothDevice
+import android.media.AudioManager
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.min
@@ -81,12 +83,29 @@ class MediaNotificationService : Service() {
         }
     }
 
+    private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                pausePlayback()
+            }
+        }
+    }
+
+    private val bluetoothReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == BluetoothDevice.ACTION_ACL_DISCONNECTED) {
+                pausePlayback()
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         instance = this
         createNotificationChannel()
         setupMediaSession()
         registerReceivers()
+        registerDisconnectReceivers()
         try {
             startForeground(NOTIFICATION_ID, buildNotification(), getStartForegroundServiceType())
         } catch (e: Exception) {
@@ -116,6 +135,8 @@ class MediaNotificationService : Service() {
         releaseWakeLock()
         instance = null
         try { unregisterReceiver(actionReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(bluetoothReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(audioBecomingNoisyReceiver) } catch (_: Exception) {}
         mediaSession.release()
         super.onDestroy()
     }
@@ -191,6 +212,32 @@ class MediaNotificationService : Service() {
         } else {
             registerReceiver(actionReceiver, filter)
         }
+    }
+
+    private fun registerDisconnectReceivers() {
+        val noisyFilter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(audioBecomingNoisyReceiver, noisyFilter, RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(audioBecomingNoisyReceiver, noisyFilter)
+        }
+
+        val btFilter = IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(bluetoothReceiver, btFilter, RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(bluetoothReceiver, btFilter)
+        }
+    }
+
+    private fun pausePlayback() {
+        isPlaying = false
+        updatePlaybackState()
+        showNotification()
+        try {
+            mediaSession.controller.transportControls.pause()
+        } catch (_: Exception) {}
+        webView?.evaluateJavascript("actPlayPause(false)", null)
     }
 
     fun updateFromMediaStatus(json: String) {

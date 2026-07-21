@@ -7,7 +7,9 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 
-class SpotifyWebChromeClient : WebChromeClient() {
+class SpotifyWebChromeClient(
+    private val onProgressChanged: ((Int) -> Unit)? = null
+) : WebChromeClient() {
 
     private var childWebView: WebView? = null
 
@@ -51,5 +53,10 @@ class SpotifyWebChromeClient : WebChromeClient() {
 
     override fun onConsoleMessage(message: String?, lineNumber: Int, sourceId: String?) {
         android.util.Log.d("SpotifyJS", "$message [$sourceId:$lineNumber]")
+    }
+
+    override fun onProgressChanged(view: WebView?, newProgress: Int) {
+        super.onProgressChanged(view, newProgress)
+        onProgressChanged?.invoke(newProgress)
     }
 }
