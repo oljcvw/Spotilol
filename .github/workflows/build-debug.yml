@@ -71,3 +71,4 @@ jobs:
           path: app/build/outputs/apk/${{ env.BUILD_TYPE_LOWER }}/*.apk
           overwrite: true
           retention-days: 7
+          archive: false
