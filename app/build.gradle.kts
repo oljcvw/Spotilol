@@ -52,11 +52,10 @@ android {
             }
         }
         release {
-
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("sharedKey")
             }
-        }
+            
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
