@@ -1,6 +1,16 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// 1. Read keystore.properties from root directory if created by GitHub Actions
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -22,18 +32,30 @@ android {
         compose = true
     }
 
+    // 2. Define the signing configuration from keystore.properties
     signingConfigs {
-        create("debugKey") {
-            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+        create("sharedKey") {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
         }
     }
 
+    // 3. Apply sharedKey to BOTH debug and release
     buildTypes {
+        debug {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("sharedKey")
+            }
+        }
         release {
-            signingConfig = signingConfigs.getByName("debugKey")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("sharedKey")
+            }
+            
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -42,6 +64,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
