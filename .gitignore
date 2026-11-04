@@ -32,3 +32,5 @@ Desktop.ini
 
 # Logs
 *.log
+
+/keystore.properties

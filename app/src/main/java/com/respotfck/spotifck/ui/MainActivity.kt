@@ -1,4 +1,4 @@
-package com.project.lol.ui
+package com.respotfck.spotifck.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -7,6 +7,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import android.os.CountDownTimer
 import android.view.LayoutInflater
 import android.view.View
@@ -76,14 +77,14 @@ import androidx.webkit.ProxyController
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import androidx.webkit.WebSettingsCompat
-import com.project.lol.R
-import com.project.lol.bridge.SpotifyBridge
-import com.project.lol.proxy.LocalProxyManager
-import com.project.lol.service.MediaNotificationService
-import com.project.lol.ui.theme.SpotifyTheme
-import com.project.lol.update.UpdateChecker
-import com.project.lol.webview.SpotifyWebChromeClient
-import com.project.lol.webview.SpotifyWebViewClient
+import com.respotfck.spotifck.R
+import com.respotfck.spotifck.bridge.SpotifyBridge
+import com.respotfck.spotifck.proxy.LocalProxyManager
+import com.respotfck.spotifck.service.MediaNotificationService
+import com.respotfck.spotifck.ui.theme.SpotifyTheme
+import com.respotfck.spotifck.update.UpdateChecker
+import com.respotfck.spotifck.webview.SpotifyWebChromeClient
+import com.respotfck.spotifck.webview.SpotifyWebViewClient
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executors
 
@@ -127,6 +128,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
 
         // After an OOM kill, Android can resume directly at MainActivity
         // skipping CertificateActivity. Redirect there so the proxy starts.
@@ -144,7 +149,7 @@ class MainActivity : ComponentActivity() {
         requestBluetoothPermission()
         val uc = UpdateChecker(this)
         updateAvailable.value = uc.hasUpdateAvailable()
-        uc.autoCheck()
+        uc.autoCheck { updateAvailable.value = it }
 
         val prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
         val loggedIn = prefs.getBoolean("LoggedIn", false)

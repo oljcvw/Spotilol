@@ -1,4 +1,4 @@
-package com.project.lol.service
+package com.respotfck.spotifck.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -21,7 +21,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.webkit.WebView
 import androidx.core.app.NotificationCompat
-import com.project.lol.R
+import com.respotfck.spotifck.R
 import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media.session.MediaButtonReceiver
 import android.bluetooth.BluetoothDevice
@@ -37,10 +37,10 @@ class MediaNotificationService : Service() {
         private const val CHANNEL_ID = "spotilol_media_playback"
         private const val NOTIFICATION_ID = 1
 
-        private const val ACTION_PLAY_PAUSE = "com.project.lol.ACTION_PLAY_PAUSE"
-        private const val ACTION_NEXT = "com.project.lol.ACTION_NEXT"
-        private const val ACTION_PREV = "com.project.lol.ACTION_PREV"
-        private const val ACTION_FAVORITE = "com.project.lol.ACTION_FAVORITE"
+        private const val ACTION_PLAY_PAUSE = "com.respotfck.spotifck.ACTION_PLAY_PAUSE"
+        private const val ACTION_NEXT = "com.respotfck.spotifck.ACTION_NEXT"
+        private const val ACTION_PREV = "com.respotfck.spotifck.ACTION_PREV"
+        private const val ACTION_FAVORITE = "com.respotfck.spotifck.ACTION_FAVORITE"
 
         private const val CUSTOM_ACTION_TOGGLE_FAV = "toggle_fav"
 

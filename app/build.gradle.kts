@@ -14,11 +14,19 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.project.lol"
+    namespace = "com.respotfck.spotifck"
     compileSdk = 37
 
+    packaging {
+        resources {
+            // Bouncy Castle publishes the same license in each of its modules.
+            // Keep one identical copy in the APK instead of dropping the notice.
+            pickFirsts += "META-INF/LICENSE.md"
+        }
+    }
+
     defaultConfig {
-        applicationId = "com.project.lol"
+        applicationId = "com.respotfck.spotifck"
         minSdk = 28
         targetSdk = 36
         versionCode = 5
@@ -44,13 +52,9 @@ android {
         }
     }
 
-    // 3. Apply sharedKey to BOTH debug and release
+    // Keep development APKs on the standard debug certificate. Use the
+    // private release certificate only for distributable release builds.
     buildTypes {
-        debug {
-            if (keystorePropertiesFile.exists()) {
-                signingConfig = signingConfigs.getByName("sharedKey")
-            }
-        }
         release {
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("sharedKey")
@@ -79,7 +83,6 @@ dependencies {
     implementation(libs.androidx.media)
     implementation(libs.bouncyprov)
     implementation(libs.bouncypkix)
-    implementation(libs.security.crypto)
 
     // Jetpack Compose
     implementation(platform(libs.compose.bom))

@@ -47,7 +47,7 @@ jobs:
 
           mkdir -p signing
           printf '%s' "$ANDROID_KEYSTORE" | base64 -d > signing/release.jks
-          printf 'storeFile=signing/release.jks\nstorePassword=%s\nkeyAlias=spotilol\nkeyPassword=%s\n' \
+          printf 'storeFile=signing/release.jks\nstorePassword=%s\nkeyAlias=spotifck\nkeyPassword=%s\n' \
             "$KEYSTORE_PASSWORD" "$KEY_PASSWORD" > keystore.properties
 
       - name: Set up JDK
@@ -59,7 +59,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: "9.4.1"
+          gradle-version: "9.8.0"
 
       - name: Build APK
         shell: bash

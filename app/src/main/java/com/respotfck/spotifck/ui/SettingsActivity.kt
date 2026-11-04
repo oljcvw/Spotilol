@@ -1,9 +1,10 @@
-package com.project.lol.ui
+package com.respotfck.spotifck.ui
 
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebView
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -83,8 +85,8 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import com.project.lol.R
-import com.project.lol.ui.theme.SpotifyTheme
+import com.respotfck.spotifck.R
+import com.respotfck.spotifck.ui.theme.SpotifyTheme
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,8 +94,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.webkit.WebViewCompat
-import com.project.lol.proxy.LocalProxyManager
-import com.project.lol.update.UpdateChecker
+import com.respotfck.spotifck.proxy.LocalProxyManager
+import com.respotfck.spotifck.update.UpdateChecker
 
 @OptIn(ExperimentalMaterial3Api::class)
 class SettingsActivity : ComponentActivity() {
@@ -103,6 +105,10 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
         prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
 
         setContent {
@@ -175,6 +181,7 @@ fun SettingsScreen(
 
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showClearDataDialog by remember { mutableStateOf(false) }
+    var showPrivacyNotice by remember { mutableStateOf(false) }
     var showAutoPlayDialog by remember { mutableStateOf(false) }
     var showGuiModeDialog by remember { mutableStateOf(false) }
     var showCustomCssDialog by remember { mutableStateOf(false) }
@@ -369,6 +376,15 @@ fun SettingsScreen(
                         Toast.makeText(context, "Exported to $path", Toast.LENGTH_LONG).show()
                     }
                 )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
+                    title = "Privacy & Legal Notice",
+                    subtitle = "Review proxy, service, and copyright information",
+                    icon = Icons.Default.Info,
+                    onClick = { showPrivacyNotice = true }
+                )
             }
 
             SettingSectionCard(
@@ -409,18 +425,33 @@ fun SettingsScreen(
             val updateContext = LocalContext.current
             val uc = remember { UpdateChecker(updateContext) }
             var hasUpdate by remember { mutableStateOf(uc.hasUpdateAvailable()) }
+            var checkingForUpdates by remember { mutableStateOf(false) }
             SettingSectionCard(
                 title = "UPDATES",
                 icon = Icons.Default.SystemUpdate
             ) {
                 SettingTile(
-                    title = "Check for Updates",
-                    subtitle = "Manually check for new releases",
+                    title = if (checkingForUpdates) "Checking for Updates…" else "Check for Updates",
+                    subtitle = if (hasUpdate) "A newer release is available" else "Manually check for new releases",
                     icon = Icons.Default.SystemUpdate,
                     showBadge = hasUpdate,
                     onClick = {
-                        uc.clearUpdateAvailable()
-                        hasUpdate = false
+                        if (!checkingForUpdates) {
+                            checkingForUpdates = true
+                            uc.checkForUpdates { available ->
+                                checkingForUpdates = false
+                                if (available == null) {
+                                    Toast.makeText(updateContext, "Could not check for updates", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    hasUpdate = available
+                                    Toast.makeText(
+                                        updateContext,
+                                        if (available) "An update is available" else "Spotif*ck is up to date",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
                     }
                 )
             }
@@ -454,7 +485,7 @@ fun SettingsScreen(
                     title = "Spotif*ck Version",
                     subtitle = "v$appVersionName",
                     icon = Icons.Default.Smartphone,
-                    onClick = {}
+                    onClick = null
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
@@ -463,7 +494,7 @@ fun SettingsScreen(
                     title = "WebView Engine",
                     subtitle = pkg?.versionName ?: "System WebView",
                     icon = Icons.Default.Language,
-                    onClick = {}
+                    onClick = null
                 )
             }
 
@@ -479,6 +510,30 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(8.dp))
         }
+    }
+
+    if (showPrivacyNotice) {
+        AlertDialog(
+            onDismissRequest = { showPrivacyNotice = false },
+            title = { Text("Privacy & Legal Notice", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 440.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Spotif*ck is an independent community fork and is not affiliated with or endorsed by Spotify.")
+                    Text("Third-party services may receive account, playback, and device data under their own terms and privacy policies.")
+                    Text("Ad filtering and player controls modify web-player requests and behavior. Features may stop working or conflict with service terms. They do not grant rights to copy or redistribute music. Follow applicable service terms, copyright laws, and DMCA requirements.")
+                    Text("The app's local proxy can decrypt and modify HTTPS traffic routed through its WebView when its CA certificate is installed. Remove that certificate from Android Settings > Security > Encryption & credentials > User credentials if you stop using the app.")
+                    Text("The proxy is not a VPN, encrypted DNS service, or anonymity tool. Spotify and network providers can still observe activity, and DNS uses the device's configured resolver.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPrivacyNotice = false }) { Text("Close") }
+            }
+        )
     }
 
     if (showAutoPlayDialog) {
@@ -603,14 +658,14 @@ fun SettingTile(
     subtitle: String,
     icon: ImageVector? = null,
     painter: Painter? = null,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)? = null,
     isDestructive: Boolean = false,
     showBadge: Boolean = false
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -668,12 +723,14 @@ fun SettingTile(
             )
         }
         Spacer(Modifier.width(8.dp))
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.size(20.dp)
-        )
+        if (onClick != null) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

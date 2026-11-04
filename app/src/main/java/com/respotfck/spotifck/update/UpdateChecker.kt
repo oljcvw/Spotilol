@@ -1,4 +1,4 @@
-package com.project.lol.update
+package com.respotfck.spotifck.update
 
 import android.content.Context
 import android.os.Handler
@@ -27,38 +27,57 @@ class UpdateChecker(private val context: Context) {
             .edit().putBoolean(KEY_HAS_UPDATE, false).apply()
     }
 
-    fun autoCheck() {
+    fun autoCheck(onResult: ((Boolean) -> Unit)? = null) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val lastCheck = prefs.getLong(KEY_LAST_CHECK, 0)
-        if (System.currentTimeMillis() - lastCheck < CHECK_INTERVAL_MS) return
+        if (System.currentTimeMillis() - lastCheck < CHECK_INTERVAL_MS) {
+            onResult?.invoke(hasUpdateAvailable())
+            return
+        }
 
         prefs.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
-        fetchUpdateAvailable()
+        fetchUpdateAvailable { result -> result?.let { onResult?.invoke(it) } }
     }
 
-    private fun fetchUpdateAvailable() {
+    fun checkForUpdates(onResult: (Boolean?) -> Unit) {
+        fetchUpdateAvailable(onResult)
+    }
+
+    private fun fetchUpdateAvailable(onResult: ((Boolean?) -> Unit)? = null) {
         Thread {
-            try {
+            val available = try {
                 val url = URL(API_URL)
                 val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "GET"
-                conn.setRequestProperty("Accept", "application/vnd.github+json")
-                conn.connectTimeout = 5000
-                conn.readTimeout = 5000
+                try {
+                    conn.requestMethod = "GET"
+                    conn.setRequestProperty("Accept", "application/vnd.github+json")
+                    conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+                    conn.setRequestProperty("User-Agent", "Spotifck-Android")
+                    conn.connectTimeout = 8000
+                    conn.readTimeout = 8000
 
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().readText()
-                    val json = JSONObject(body)
-                    val tagName = json.getString("tag_name").removePrefix("v")
+                    if (conn.responseCode != HttpURLConnection.HTTP_OK) {
+                        throw IllegalStateException("GitHub returned HTTP ${conn.responseCode}")
+                    }
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val tagName = JSONObject(body).getString("tag_name").removePrefix("v")
                     val currentVersion = context.packageManager
                         .getPackageInfo(context.packageName, 0).versionName ?: ""
-
-                    if (isNewer(tagName, currentVersion)) {
-                        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                            .edit().putBoolean(KEY_HAS_UPDATE, true).apply()
-                    }
+                    isNewer(tagName, currentVersion)
+                } finally {
+                    conn.disconnect()
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                null
+            }
+
+            if (available != null) {
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit().putBoolean(KEY_HAS_UPDATE, available).apply()
+            }
+            onResult?.let { callback ->
+                Handler(Looper.getMainLooper()).post { callback(available) }
+            }
         }.start()
     }
 

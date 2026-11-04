@@ -54,6 +54,12 @@ The app creates a local certificate used by its proxy. Android requires you to i
 
 The certificate and proxy key are stored on your device. If you clear credential storage or reinstall the app, you may need to repeat setup.
 
+## Privacy and legal notice
+
+On first launch, the app explains its third-party service, copyright, ad-filtering, and proxy behavior. The proxy listens on the device only and can decrypt and modify HTTPS traffic routed through the app's WebView. Installing its CA certificate adds a trust anchor on your device; remove it from **Settings > Security > Encryption & credentials > User credentials** if you stop using the app. The proxy is not a VPN, encrypted DNS service, or anonymity tool, and it does not hide activity from Spotify or your network provider. DNS uses the device's configured resolver.
+
+Spotif*ck is an independent community project, not affiliated with Spotify. Service features can change or conflict with third-party terms. Users are responsible for complying with applicable laws, service terms, and copyright requirements. This notice is not a grant of rights to Spotify content.
+
 ## Build from source
 
 ~~~bash
@@ -78,6 +84,7 @@ Report bugs and suggest changes through [GitHub Issues](https://github.com/ReSpo
 ## Credits
 
 - Spotilol, by lyssadev and maintained by its contributors
+- Bouncy Castle, used for local certificate creation; its license notice is retained in the APK
 - Spotifuck, by Deviato, whose reverse-engineering work informed the upstream project
 
 This fork keeps the existing Android application ID so existing installations can update in place. The rebrand changes the displayed app name and release links, while retaining the inherited package and stored preference identifiers for upgrade compatibility.

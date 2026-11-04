@@ -1,10 +1,10 @@
-package com.project.lol.bridge
+package com.respotfck.spotifck.bridge
 
 import android.app.Activity
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.widget.Toast
-import com.project.lol.service.MediaNotificationService
+import com.respotfck.spotifck.service.MediaNotificationService
 import java.lang.ref.WeakReference
 
 class SpotifyBridge(activityRef: WeakReference<Activity>) {

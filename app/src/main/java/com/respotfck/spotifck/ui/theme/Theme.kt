@@ -1,4 +1,4 @@
-package com.project.lol.ui.theme
+package com.respotfck.spotifck.ui.theme
 
 import android.os.Build
 import androidx.compose.material3.MaterialTheme

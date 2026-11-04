@@ -1,7 +1,8 @@
-package com.project.lol.ui
+package com.respotfck.spotifck.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,11 +16,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,8 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.project.lol.proxy.LocalProxyManager
-import com.project.lol.ui.theme.SpotifyTheme
+import com.respotfck.spotifck.proxy.LocalProxyManager
+import com.respotfck.spotifck.ui.theme.SpotifyTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -54,14 +59,23 @@ class CertificateActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
 
         setContent {
+            val disclosurePrefs = getSharedPreferences("spotifck_disclosure", MODE_PRIVATE)
+            var disclosureAccepted by remember {
+                mutableStateOf(disclosurePrefs.getBoolean("first_run_notice_acknowledged", false))
+            }
             var certInstalled by remember { mutableStateOf(false) }
             var checkDone by remember { mutableStateOf(false) }
             var checking by remember { mutableStateOf(true) }
             val scope = rememberCoroutineScope()
 
-            LaunchedEffect(Unit) {
+            LaunchedEffect(disclosureAccepted) {
+                if (!disclosureAccepted) return@LaunchedEffect
                 withContext(Dispatchers.IO) {
                     LocalProxyManager.init(this@CertificateActivity)
                     LocalProxyManager.start()
@@ -80,7 +94,17 @@ class CertificateActivity : ComponentActivity() {
             }
 
             SpotifyTheme {
-                when {
+                if (!disclosureAccepted) {
+                    FirstRunDisclosure(
+                        onContinue = {
+                            disclosurePrefs.edit()
+                                .putBoolean("first_run_notice_acknowledged", true)
+                                .apply()
+                            disclosureAccepted = true
+                        },
+                        onExit = { finish() }
+                    )
+                } else when {
                     checking -> {
                         Column(
                             modifier = Modifier
@@ -137,6 +161,34 @@ class CertificateActivity : ComponentActivity() {
             }
         }
     }
+}
+
+@Composable
+private fun FirstRunDisclosure(onContinue: () -> Unit, onExit: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onExit,
+        title = { Text("Before you continue", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 440.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Spotif*ck is an independent community fork. It is not affiliated with or endorsed by Spotify.")
+                Text("This app loads third-party music services. They may receive your account, playback, and device data under their own terms and privacy policies.")
+                Text("Ad filtering and player controls modify web-player requests and behavior. They may stop working, may conflict with service terms, and do not grant rights to copy or redistribute music. Use services and content lawfully and respect copyright and DMCA requirements.")
+                Text("The app uses a proxy bound to this device to modify traffic from its WebView. Installing the app’s CA certificate lets the local proxy decrypt and change HTTPS traffic routed through it. Do not install it if you do not trust this app. You can remove it later under Android Settings > Security > Encryption & credentials > User credentials.")
+                Text("This proxy is not a VPN, encrypted DNS service, or anonymity tool. It does not hide your activity from Spotify or your network provider; DNS continues to use your device’s configured resolver. The app does not send proxy traffic through a remote privacy service.")
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onContinue) { Text("Continue") }
+        },
+        dismissButton = {
+            TextButton(onClick = onExit) { Text("Exit") }
+        }
+    )
 }
 
 @Composable

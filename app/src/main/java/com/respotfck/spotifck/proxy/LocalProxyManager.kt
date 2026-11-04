@@ -1,4 +1,4 @@
-package com.project.lol.proxy
+package com.respotfck.spotifck.proxy
 
 import android.app.Activity
 import android.content.ContentValues
@@ -7,10 +7,10 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.security.KeyChain
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.util.Log
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
@@ -32,6 +32,10 @@ import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 import java.util.Collections
 import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
@@ -47,8 +51,9 @@ import javax.net.ssl.SSLSocketFactory
 object LocalProxyManager {
     private const val TAG = "LocalProxy"
     private const val KEYSTORE_FILE = "proxy_ca.p12"
-    private const val KEYSTORE_PREFS = "spotilol_secure_prefs"
-    private const val KEY_PASSWORD = "keystore_password"
+    private const val KEYSTORE_PREFS = "spotifck_secure_prefs"
+    private const val ENCRYPTED_PASSWORD = "encrypted_keystore_password"
+    private const val PASSWORD_KEY_ALIAS = "com.respotfck.spotifck.local_proxy_password"
     private const val CA_ALIAS = "spotilol-ca"
     private const val KEYSTORE_TYPE = "PKCS12"
 
@@ -69,24 +74,55 @@ object LocalProxyManager {
     val isRunning: Boolean get() = serverSocket?.isBound == true && !(serverSocket?.isClosed ?: true)
 
     private fun getOrCreateKeystorePassword(context: Context): String {
-        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-        val prefs = EncryptedSharedPreferences.create(
-            KEYSTORE_PREFS,
-            masterKeyAlias,
-            context,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-        var password = prefs.getString(KEY_PASSWORD, null)
-        if (password == null) {
-            val random = SecureRandom()
-            val bytes = ByteArray(32)
-            random.nextBytes(bytes)
-            password = Base64.encodeToString(bytes, Base64.NO_WRAP)
-            prefs.edit().putString(KEY_PASSWORD, password).apply()
+        val prefs = context.getSharedPreferences(KEYSTORE_PREFS, Context.MODE_PRIVATE)
+        val key = getOrCreatePasswordEncryptionKey()
+        val saved = prefs.getString(ENCRYPTED_PASSWORD, null)
+        if (saved != null) {
+            try {
+                val payload = Base64.decode(saved, Base64.NO_WRAP)
+                require(payload.size > GCM_IV_BYTES) { "Stored proxy password is incomplete" }
+                val iv = payload.copyOfRange(0, GCM_IV_BYTES)
+                val ciphertext = payload.copyOfRange(GCM_IV_BYTES, payload.size)
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
+                return String(cipher.doFinal(ciphertext), Charsets.UTF_8)
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not decrypt the local proxy keystore password; generating a new CA", e)
+                prefs.edit().remove(ENCRYPTED_PASSWORD).apply()
+            }
         }
+
+        val bytes = ByteArray(32).also(SecureRandom()::nextBytes)
+        val password = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+        val ciphertext = cipher.doFinal(password.toByteArray(Charsets.UTF_8))
+        val payload = cipher.iv + ciphertext
+        prefs.edit().putString(ENCRYPTED_PASSWORD, Base64.encodeToString(payload, Base64.NO_WRAP)).apply()
         return password
     }
+
+    private fun getOrCreatePasswordEncryptionKey(): SecretKey {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (keyStore.getKey(PASSWORD_KEY_ALIAS, null) as? SecretKey)?.let { return it }
+
+        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+        generator.init(
+            KeyGenParameterSpec.Builder(
+                PASSWORD_KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .setRandomizedEncryptionRequired(true)
+                .build()
+        )
+        return generator.generateKey()
+    }
+
+    private const val GCM_IV_BYTES = 12
+    private const val GCM_TAG_BITS = 128
 
     fun init(context: Context) {
         val ksFile = File(context.filesDir, KEYSTORE_FILE)

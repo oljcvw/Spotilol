@@ -1,16 +1,15 @@
 [versions]
-agp = "9.2.1"
-kotlin = "2.4.0"
-coreKtx = "1.19.0"
-appcompat = "1.7.1"
+agp = "9.5.0"
+kotlin = "2.4.21"
+coreKtx = "1.19.1"
+appcompat = "1.8.0"
 material = "1.14.0"
-webkit = "1.13.0"
-composeBom = "2026.06.01"
-activityCompose = "1.10.0"
-lifecycleRuntime = "2.9.0"
-media = "1.7.1"
-securityCrypto = "1.0.0"
-bouncycastle = "1.70"
+webkit = "1.18.0"
+composeBom = "2026.09.00"
+activityCompose = "1.13.0"
+lifecycleRuntime = "2.11.0"
+media = "1.8.0"
+bouncycastle = "1.86"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -18,9 +17,8 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 androidx-media = { group = "androidx.media", name = "media", version.ref = "media" }
-bouncyprov = { group = "org.bouncycastle", name = "bcprov-jdk15on", version.ref = "bouncycastle" }
-bouncypkix = { group = "org.bouncycastle", name = "bcpkix-jdk15on", version.ref = "bouncycastle" }
-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+bouncyprov = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
+bouncypkix = { group = "org.bouncycastle", name = "bcpkix-jdk18on", version.ref = "bouncycastle" }
 
 # Jetpack Compose
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }

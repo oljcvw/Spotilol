@@ -1,4 +1,4 @@
-package com.project.lol.webview
+package com.respotfck.spotifck.webview
 
 import android.os.Handler
 import android.os.Looper

@@ -1,6 +1,7 @@
-package com.project.lol.webview
+package com.respotfck.spotifck.webview
 
 import android.graphics.Bitmap
+import android.net.Uri
 import android.util.Log
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
@@ -67,7 +68,6 @@ class SpotifyWebViewClient(
         request: WebResourceRequest
     ): WebResourceResponse? {
         val url = request.url.toString()
-        val method = request.method
 
         if (isAnalyticsDomain(url)) {
             val headers = mapOf("Access-Control-Allow-Origin" to "*")
@@ -75,10 +75,9 @@ class SpotifyWebViewClient(
                 ByteArrayInputStream(ByteArray(0)))
         }
 
-        val adMatch = matchAdCdn(url)
-        if (adMatch != null) {
+        if (request.method == "GET" && matchAdCdn(url) != null) {
             view.post { view.evaluateJavascript("AndBridge.deferMessage('adblock')", null) }
-            val silent = view.context.assets?.open("silent.mp3") ?: return null
+            val silent = view.context.assets.open("silent.mp3")
             return WebResourceResponse("audio/mpeg", null, silent)
         }
 
@@ -824,32 +823,45 @@ class SpotifyWebViewClient(
         }
 
         private fun isAnalyticsDomain(url: String): Boolean {
-            return url.contains("doubleclick.net") ||
-                    url.contains("googlesyndication.com") ||
-                    url.contains("fastly-insights.com") ||
-                    url.contains("sentry.io") ||
-                    url.contains("t.6sc.co") ||
-                    url.contains("tracker.samplicio.us") ||
-                    url.contains("adsrvr.org") ||
-                    url.contains("aet.spotify.com")
+            val host = Uri.parse(url).host?.lowercase() ?: return false
+            return listOf(
+                "doubleclick.net",
+                "googlesyndication.com",
+                "fastly-insights.com",
+                "sentry.io",
+                "t.6sc.co",
+                "tracker.samplicio.us",
+                "adsrvr.org",
+                "aet.spotify.com"
+            ).any { isHostOrSubdomain(host, it) }
         }
 
         private fun matchAdCdn(url: String): String? {
-            if (url.contains("scdn.co/mp3-ad/")) return "scdn.co/mp3-ad/"
-            if (url.contains("mp3ad.scdn.co")) return "mp3ad.scdn.co"
-            if (url.contains("amillionads.com")) return "amillionads.com"
-            if (url.contains("2mdn.net")) return "2mdn.net"
-            if (url.contains("adxcel.com")) return "adxcel.com"
-            if (url.contains("adstudio-assets.scdn.co")) return "adstudio-assets.scdn.co"
-            if (url.contains("audio-ads.spotify.com")) return "audio-ads.spotify.com"
-            if (url.contains("ads-akp.spotify.com")) return "ads-akp.spotify.com"
-            if (url.contains("ads-fa.spotify.com")) return "ads-fa.spotify.com"
-            if (url.contains("adeventtracker.spotify.com")) return "adeventtracker.spotify.com"
-            if (url.contains("pixel-static.spotify.com")) return "pixel-static.spotify.com"
-            if (url.contains("pixel.spotify.com")) return "pixel.spotify.com"
-            if (url.contains("adstudio.spotify.com")) return "adstudio.spotify.com"
-            if (url.contains("ads.spotify.com")) return "ads.spotify.com"
-            return null
+            val uri = Uri.parse(url)
+            val host = uri.host?.lowercase() ?: return null
+            if (isHostOrSubdomain(host, "scdn.co") && uri.path.orEmpty().contains("/mp3-ad/")) {
+                return "scdn.co/mp3-ad/"
+            }
+            val adHosts = listOf(
+                "mp3ad.scdn.co",
+                "amillionads.com",
+                "2mdn.net",
+                "adxcel.com",
+                "adstudio-assets.scdn.co",
+                "audio-ads.spotify.com",
+                "ads-akp.spotify.com",
+                "ads-fa.spotify.com",
+                "adeventtracker.spotify.com",
+                "pixel-static.spotify.com",
+                "pixel.spotify.com",
+                "adstudio.spotify.com",
+                "ads.spotify.com"
+            )
+            return adHosts.firstOrNull { isHostOrSubdomain(host, it) }
+        }
+
+        private fun isHostOrSubdomain(host: String, domain: String): Boolean {
+            return host == domain || host.endsWith(".$domain")
         }
 
         fun buildCustomCssJs(css: String): String {

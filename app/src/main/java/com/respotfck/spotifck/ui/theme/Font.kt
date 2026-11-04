@@ -1,11 +1,11 @@
-package com.project.lol.ui.theme
+package com.respotfck.spotifck.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import com.project.lol.R
+import com.respotfck.spotifck.R
 
 val Saira = FontFamily(
     Font(R.font.saira_thin, FontWeight.Thin),
