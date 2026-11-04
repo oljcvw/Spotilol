@@ -1,74 +1,92 @@
-name: Build Any APK
+name: Build APK
 
 on:
   push:
-    branches: [ "main" ] # Keeps automatic builds
-  workflow_dispatch:     # Enables the manual "Run workflow" button
+    branches: ["main"]
+  workflow_dispatch:
     inputs:
       build_type:
-        description: 'Choose the build variant to compile'
+        description: "Choose the build variant to compile"
         required: true
-        type: choice      
-        default: 'Release'
+        type: choice
+        default: Release
         options:
           - Release
           - Debug
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Check out source
         uses: actions/checkout@v7
 
-      - name: Determine Build Type
+      - name: Determine build type
+        shell: bash
         run: |
-          # If triggered by a push default to 'Release'
           TYPE="${{ inputs.build_type || 'Release' }}"
-          # Convert to lowercase for the Android folder paths
-          TYPE_LOWER=$(echo "$TYPE" | tr '[:upper:]' '[:lower:]')
-          
-          echo "BUILD_TYPE=$TYPE" >> $GITHUB_ENV
-          echo "BUILD_TYPE_LOWER=$TYPE_LOWER" >> $GITHUB_ENV
+          TYPE_LOWER="$(echo "$TYPE" | tr '[:upper:]' '[:lower:]')"
+          echo "BUILD_TYPE=$TYPE" >> "$GITHUB_ENV"
+          echo "BUILD_TYPE_LOWER=$TYPE_LOWER" >> "$GITHUB_ENV"
 
-      - name: Restore signing key
+      - name: Restore signing key when configured
+        shell: bash
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          if [[ -z "$ANDROID_KEYSTORE" || -z "$KEYSTORE_PASSWORD" || -z "$KEY_PASSWORD" ]]; then
+            echo "Signing secrets are not configured; a release build will be unsigned."
+            exit 0
+          fi
+
           mkdir -p signing
-          printf "%s" "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > signing/release.jks
+          printf '%s' "$ANDROID_KEYSTORE" | base64 -d > signing/release.jks
+          printf 'storeFile=signing/release.jks\nstorePassword=%s\nkeyAlias=spotilol\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_PASSWORD" > keystore.properties
 
-      - name: Create keystore.properties
-        run: |
-          printf "storeFile=signing/release.jks\nstorePassword=%s\nkeyAlias=spotilol\nkeyPassword=%s\n" \
-            "${{ secrets.KEYSTORE_PASSWORD }}" \
-            "${{ secrets.KEY_PASSWORD }}" > keystore.properties
-
-      - name: Set up JDK 21
+      - name: Set up JDK
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
 
-      - name: Setup Gradle
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.4.1"
-        
+
       - name: Build APK
+        shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew assemble${{ env.BUILD_TYPE }}
+          ./gradlew "assemble$BUILD_TYPE"
 
-      - name: Rename APK
+      - name: Name APK
+        shell: bash
         run: |
-          mv app/build/outputs/apk/${{ env.BUILD_TYPE_LOWER }}/app-${{ env.BUILD_TYPE_LOWER }}.apk \
-             app/build/outputs/apk/${{ env.BUILD_TYPE_LOWER }}/spotilol-${{ env.BUILD_TYPE_LOWER }}-${{ github.run_number }}.apk
+          APK_DIR="app/build/outputs/apk/$BUILD_TYPE_LOWER"
+          APK_PATH="$APK_DIR/app-$BUILD_TYPE_LOWER.apk"
+          OUTPUT_NAME="spotifck-$BUILD_TYPE_LOWER-$GITHUB_RUN_NUMBER.apk"
 
-      - name: Upload APK Artifact
+          if [[ ! -f "$APK_PATH" ]]; then
+            APK_PATH="$APK_DIR/app-$BUILD_TYPE_LOWER-unsigned.apk"
+            OUTPUT_NAME="spotifck-$BUILD_TYPE_LOWER-unsigned-$GITHUB_RUN_NUMBER.apk"
+          fi
+
+          test -f "$APK_PATH"
+          cp "$APK_PATH" "$APK_DIR/$OUTPUT_NAME"
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: spotilol-${{ env.BUILD_TYPE_LOWER }}-apk
-          path: app/build/outputs/apk/${{ env.BUILD_TYPE_LOWER }}/*.apk
+          name: spotifck-${{ env.BUILD_TYPE_LOWER }}-apk
+          path: app/build/outputs/apk/${{ env.BUILD_TYPE_LOWER }}/spotifck-*.apk
           overwrite: true
-          retention-days: 7
+          retention-days: 14
           archive: false

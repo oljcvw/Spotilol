@@ -161,7 +161,7 @@ fun CACertDialog(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "Spotilol uses a local certificate to bypass Spotify's WebView restrictions. Install it once to continue.",
+            text = "Spotif*ck uses a local certificate to bypass Spotify's WebView restrictions. Install it once to continue.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
             textAlign = TextAlign.Center
@@ -179,7 +179,7 @@ fun CACertDialog(
                 Spacer(Modifier.height(12.dp))
                 Step(2, "Go to Settings > Security > Encryption & credentials > Install a certificate > CA certificate")
                 Spacer(Modifier.height(12.dp))
-                Step(3, "Select the file Spotilol_CA.pem from your Downloads folder")
+                Step(3, "Select the file Spotifck_CA.pem from your Downloads folder")
                 Spacer(Modifier.height(12.dp))
                 Step(4, "When prompted, choose \"Install anyway\"")
                 Spacer(Modifier.height(12.dp))

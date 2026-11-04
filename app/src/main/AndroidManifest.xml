@@ -19,7 +19,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Spotilol"
+        android:theme="@style/Theme.Spotifck"
         android:networkSecurityConfig="@xml/network_security_config"
         android:usesCleartextTraffic="false">
 
@@ -27,7 +27,7 @@
             android:name=".ui.CertificateActivity"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.Spotilol">
+            android:theme="@style/Theme.Spotifck">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -40,13 +40,13 @@
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.Spotilol" />
+            android:theme="@style/Theme.Spotifck" />
 
         <activity
             android:name=".ui.SettingsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.Spotilol" />
+            android:theme="@style/Theme.Spotifck" />
 
         <service
             android:name=".service.MediaNotificationService"

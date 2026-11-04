@@ -127,7 +127,7 @@ object LocalProxyManager {
         kpg.initialize(2048, SecureRandom())
         caKeyPair = kpg.generateKeyPair()
 
-        val name = X500Name("CN=Spotilol Proxy CA, O=Spotilol")
+        val name = X500Name("CN=Spotifck Proxy CA, O=Spotifck")
         val serial = BigInteger.valueOf(System.currentTimeMillis())
         val notBefore = Date()
         val notAfter = Date(notBefore.time + 365L * 24 * 60 * 60 * 1000L * 10)
@@ -620,7 +620,7 @@ object LocalProxyManager {
         }
         val domainKeyPair = leafKeyPair!!
 
-        val issuer = X500Name("CN=Spotilol Proxy CA, O=Spotilol")
+        val issuer = X500Name("CN=Spotifck Proxy CA, O=Spotifck")
         val subject = X500Name("CN=$domain")
         val serial = BigInteger.valueOf(System.currentTimeMillis())
         val notBefore = Date()
@@ -761,7 +761,7 @@ object LocalProxyManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val resolver = context.contentResolver
             val values = ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, "Spotilol_CA.pem")
+                put(MediaStore.Downloads.DISPLAY_NAME, "Spotifck_CA.pem")
                 put(MediaStore.Downloads.MIME_TYPE, "application/x-pem-file")
                 put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 put(MediaStore.Downloads.IS_PENDING, 1)
@@ -776,12 +776,12 @@ object LocalProxyManager {
                 }
                 resolver.update(uri, clearPending, null, null)
                 Log.d(TAG, "CA exported to Downloads via MediaStore")
-                return "/sdcard/Download/Spotilol_CA.pem"
+                return "/sdcard/Download/Spotifck_CA.pem"
             }
         } else {
             @Suppress("DEPRECATION")
             val file = File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS), "Spotilol_CA.pem")
+                Environment.DIRECTORY_DOWNLOADS), "Spotifck_CA.pem")
             file.writeText(pem)
             Log.d(TAG, "CA exported to ${file.absolutePath}")
             return file.absolutePath
@@ -796,7 +796,7 @@ object LocalProxyManager {
     fun installCACert(activity: Activity) {
         try {
             val intent = KeyChain.createInstallIntent()
-            intent.putExtra(KeyChain.EXTRA_NAME, "SpotilolMITM")
+            intent.putExtra(KeyChain.EXTRA_NAME, "SpotifckMITM")
             intent.putExtra(KeyChain.EXTRA_CERTIFICATE, caCert!!.encoded)
             activity.startActivity(intent)
         } catch (e: Exception) {

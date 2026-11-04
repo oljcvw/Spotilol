@@ -163,7 +163,7 @@ class MediaNotificationService : Service() {
                 "Media Playback",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Spotilol media playback controls"
+                description = "Spotif*ck media playback controls"
                 setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
@@ -174,7 +174,7 @@ class MediaNotificationService : Service() {
 
     @Suppress("DEPRECATION")
     private fun setupMediaSession() {
-        mediaSession = MediaSessionCompat(this, "SpotilolSession").apply {
+        mediaSession = MediaSessionCompat(this, "SpotifckSession").apply {
             setFlags(
                 MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
                 MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
@@ -322,7 +322,7 @@ class MediaNotificationService : Service() {
         val builder = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
-            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Spotilol")
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Spotif*ck")
             .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentDuration)
         coverBitmap?.let { bmp ->
             builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bmp)
@@ -391,9 +391,9 @@ class MediaNotificationService : Service() {
         ).build()
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(currentTitle.ifEmpty { "Spotilol" })
+            .setContentTitle(currentTitle.ifEmpty { "Spotif*ck" })
             .setContentText(currentArtist)
-            .setSubText("Spotilol")
+            .setSubText("Spotif*ck")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(contentIntent)
             .setOngoing(true)

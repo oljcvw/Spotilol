@@ -440,10 +440,10 @@ fun SettingsScreen(
             ) {
                 SettingTile(
                     title = "GitHub Repository",
-                    subtitle = "github.com/lyssadev/Spotilol",
+                    subtitle = "github.com/ReSpotF-ck/-ReSpotif-ck-App",
                     painter = painterResource(id = R.drawable.ic_github),
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/lyssadev/Spotilol"))
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ReSpotF-ck/-ReSpotif-ck-App"))
                         context.startActivity(intent)
                     }
                 )
@@ -451,7 +451,7 @@ fun SettingsScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
                 SettingTile(
-                    title = "Spotilol Version",
+                    title = "Spotif*ck Version",
                     subtitle = "v$appVersionName",
                     icon = Icons.Default.Smartphone,
                     onClick = {}
@@ -470,7 +470,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "Developed by lyssadev & reversed Spotifuck app by Deviato.",
+                text = "Forked from Spotilol by lyssadev; based on reverse-engineering work by Deviato.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.fillMaxWidth(),
