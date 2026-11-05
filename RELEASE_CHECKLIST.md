@@ -3,7 +3,7 @@
 ## Prepared in this change
 
 - [x] App name, launcher artwork, About screen, and repository links use the Spotif*ck branding.
-- [x] In-app update checks query this fork's GitHub Releases API.
+- [x] In-app update checks query this fork's GitHub Releases API and fall back to signed APKs in `release-assets/` when no GitHub Release is published; Settings offers the discovered APK link.
 - [x] App activities use Android `FLAG_SECURE` to block system screenshots and screen recording.
 - [x] First launch displays a service, copyright, and local proxy certificate disclosure.
 - [x] Release APK includes the Bouncy Castle license notice; duplicate copies are merged only after confirming identical contents.
@@ -11,6 +11,7 @@
 - [x] Updated the stable Android, Kotlin, Compose, WebKit, Media, and Bouncy Castle build dependencies.
 - [x] Android application ID and Kotlin package use `com.respotfck.spotifck`.
 - [x] README points to this repository and its issue, release, and build pages.
+- [x] About screen and README link to current maintainer N3K0 (MarshMeadow).
 
 ## Before publishing an APK
 

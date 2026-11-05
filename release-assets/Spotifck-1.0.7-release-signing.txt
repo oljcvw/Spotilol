@@ -1,0 +1,8 @@
+App: Spotif*ck
+Package: com.respotfck.spotifck
+Version: 1.0.7 (versionCode 6)
+APK signature scheme: APK Signature Scheme v2 (verified)
+Signing certificate subject: CN=Spotifck Release, OU=Android, O=ReSpotF-ck, C=US
+Signing certificate SHA-256: 61:4F:94:C2:B9:58:A6:58:D1:9C:8B:9D:FA:70:1A:63:2D:B0:86:3A:D8:85:A6:31:01:2A:E9:17:11:1C:A9:56
+
+The release keystore remains private. This fingerprint is public verification information and cannot be used to sign an APK.

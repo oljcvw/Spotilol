@@ -79,7 +79,15 @@ Report bugs and suggest changes through [GitHub Issues](https://github.com/ReSpo
 - [Source code](https://github.com/ReSpotF-ck/-ReSpotif-ck-App)
 - [Releases](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/releases)
 - [Issues](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/issues)
+- [Release APK archive](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/release-assets)
 - Official social media accounts: none are configured yet.
+
+## Current maintainer
+
+N3K0 (MarshMeadow) is the current maintainer of the ReSpotF*ck projects.
+
+- [N3K0 on GitHub](https://github.com/MarshMeadow)
+- [N3K0's website](https://marshmeadow.netlify.app)
 
 ## Credits
 

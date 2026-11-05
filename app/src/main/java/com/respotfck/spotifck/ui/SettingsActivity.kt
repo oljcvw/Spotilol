@@ -426,13 +426,19 @@ fun SettingsScreen(
             val uc = remember { UpdateChecker(updateContext) }
             var hasUpdate by remember { mutableStateOf(uc.hasUpdateAvailable()) }
             var checkingForUpdates by remember { mutableStateOf(false) }
+            var checkedVersion by remember { mutableStateOf(uc.latestVersion()) }
             SettingSectionCard(
                 title = "UPDATES",
                 icon = Icons.Default.SystemUpdate
             ) {
                 SettingTile(
                     title = if (checkingForUpdates) "Checking for Updates…" else "Check for Updates",
-                    subtitle = if (hasUpdate) "A newer release is available" else "Manually check for new releases",
+                    subtitle = when {
+                        checkingForUpdates -> "Checking GitHub Releases and release-assets"
+                        hasUpdate -> "Version ${checkedVersion ?: "new"} is available"
+                        checkedVersion != null -> "Up to date · latest v$checkedVersion"
+                        else -> "Check GitHub Releases and release-assets"
+                    },
                     icon = Icons.Default.SystemUpdate,
                     showBadge = hasUpdate,
                     onClick = {
@@ -444,6 +450,7 @@ fun SettingsScreen(
                                     Toast.makeText(updateContext, "Could not check for updates", Toast.LENGTH_SHORT).show()
                                 } else {
                                     hasUpdate = available
+                                    checkedVersion = uc.latestVersion()
                                     Toast.makeText(
                                         updateContext,
                                         if (available) "An update is available" else "Spotif*ck is up to date",
@@ -454,6 +461,26 @@ fun SettingsScreen(
                         }
                     }
                 )
+
+                if (hasUpdate) {
+                    SettingTile(
+                        title = "Download Spotif*ck ${uc.latestVersion() ?: "update"}",
+                        subtitle = "Open the signed APK from GitHub",
+                        icon = Icons.AutoMirrored.Filled.OpenInNew,
+                        onClick = {
+                            val target = uc.downloadUrl() ?: uc.releaseUrl()
+                            if (target.isNullOrBlank()) {
+                                Toast.makeText(updateContext, "No download link is available yet", Toast.LENGTH_SHORT).show()
+                            } else {
+                                runCatching {
+                                    updateContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+                                }.onFailure {
+                                    Toast.makeText(updateContext, "Could not open the download link", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+                }
             }
 
             val context = LocalContext.current
@@ -476,6 +503,32 @@ fun SettingsScreen(
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ReSpotF-ck/-ReSpotif-ck-App"))
                         context.startActivity(intent)
+                    }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
+                    title = "Developer: N3K0",
+                    subtitle = "Current maintainer · MarshMeadow",
+                    icon = Icons.Default.Code,
+                    onClick = {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/MarshMeadow"))
+                        )
+                    }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
+                    title = "N3K0's Website",
+                    subtitle = "marshmeadow.netlify.app",
+                    icon = Icons.Default.Language,
+                    onClick = {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://marshmeadow.netlify.app"))
+                        )
                     }
                 )
 
