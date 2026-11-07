@@ -1132,6 +1132,15 @@ fun SettingsScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
                 SettingTile(
+                    title = "ReSpotifuck website",
+                    subtitle = "respotfck.netlify.app",
+                    icon = Icons.Default.Language,
+                    onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://respotfck.netlify.app"))) }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
                     title = "Download page",
                     subtitle = "respotfck.netlify.app · latest APKs and install steps",
                     icon = Icons.Default.Download,
