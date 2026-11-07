@@ -110,6 +110,7 @@ class MainActivity : ComponentActivity() {
     private val engineState = mutableStateOf(WebEngine.SYSTEM)
     private var enginePageOk = false
     private val networkWarning = mutableStateOf<NetWarning?>(null)
+    private val showServiceOffWarning = mutableStateOf(false)
     private val dismissedWarning = mutableStateOf<String?>(null)
     private var serviceStarted = false
 
@@ -223,15 +224,7 @@ class MainActivity : ComponentActivity() {
                                 Switch(
                                     checked = serviceEnabled,
                                     onCheckedChange = { newValue ->
-                                        serviceEnabledState.value = newValue
-                                        prefs.edit()
-                                            .putBoolean("ServiceOn", newValue)
-                                            .apply()
-                                        if (!newValue) {
-                                            stopService(Intent(this@MainActivity, MediaNotificationService::class.java))
-                                            serviceStarted = false
-                                            destroyWebView()
-                                        }
+                                        if (newValue) setServiceEnabled(true) else showServiceOffWarning.value = true
                                     },
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
@@ -433,6 +426,23 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                if (showServiceOffWarning.value) {
+                    AlertDialog(
+                        onDismissRequest = { showServiceOffWarning.value = false },
+                        icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                        title = { Text("Turn off ReSpotifuck?", fontWeight = FontWeight.Bold) },
+                        text = {
+                            Text("Playback stops, the media notification and lock-screen controls go away, and the Spotify player is closed until you turn the service back on.")
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                showServiceOffWarning.value = false
+                                setServiceEnabled(false)
+                            }) { Text("Turn off", color = MaterialTheme.colorScheme.error) }
+                        },
+                        dismissButton = { TextButton(onClick = { showServiceOffWarning.value = false }) { Text("Cancel") } }
+                    )
+                }
                 AppLockOverlay()
             }
         }
@@ -625,6 +635,16 @@ class MainActivity : ComponentActivity() {
                 },
                 dismissButton = {}
             )
+        }
+    }
+
+    private fun setServiceEnabled(on: Boolean) {
+        serviceEnabledState.value = on
+        getSharedPreferences("spotilol_prefs", MODE_PRIVATE).edit().putBoolean("ServiceOn", on).apply()
+        if (!on) {
+            stopService(Intent(this, MediaNotificationService::class.java))
+            serviceStarted = false
+            destroyWebView()
         }
     }
 
