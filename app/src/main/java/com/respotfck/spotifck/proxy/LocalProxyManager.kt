@@ -392,7 +392,14 @@ object LocalProxyManager {
                 Log.d(TAG, "Reusing pooled upstream connection for $host")
                 borrowed
             } else {
-                openUpstreamSocket(host, targetPort, useHttp2)
+                try {
+                    openUpstreamSocket(host, targetPort, useHttp2)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Upstream connect to $host:$targetPort failed: ${e.message}")
+                    reuseUpstream = false
+                    writeBadGateway(clientSocket.outputStream, host)
+                    return
+                }
             }
             upstreamSSLSocket = upstream
 
@@ -479,6 +486,18 @@ object LocalProxyManager {
     }
 
     private const val STREAM_BUFFER_BYTES = 16 * 1024
+
+    /** Tell the client why the tunnel failed instead of closing it with an empty reply. */
+    private fun writeBadGateway(out: java.io.OutputStream, host: String) {
+        val body = "ReSpotifuck proxy could not reach $host"
+        try {
+            out.write(
+                ("HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain; charset=utf-8\r\n" +
+                    "Content-Length: ${body.toByteArray().size}\r\nConnection: close\r\n\r\n$body").toByteArray()
+            )
+            out.flush()
+        } catch (_: Exception) {}
+    }
 
     private data class HttpHead(
         val statusLine: String,
