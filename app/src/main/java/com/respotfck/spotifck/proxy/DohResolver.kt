@@ -57,6 +57,9 @@ object DnsSettings {
     }
 }
 
+/** The DoH server answered authoritatively that [host] doesn't exist; no point asking the system resolver. */
+class NxDomainException(host: String) : UnknownHostException("$host does not exist (NXDOMAIN)")
+
 /** Thrown when the DNS provider deliberately blocks a host (0.0.0.0 / ::). */
 class DnsBlockedException(host: String) : UnknownHostException("$host is blocked by the DNS provider")
 
@@ -100,6 +103,8 @@ object DohResolver {
             checkBlocked(host, lookup(endpoint, host))
         } catch (e: DnsBlockedException) {
             throw e
+        } catch (e: NxDomainException) {
+            throw e
         } catch (e: Exception) {
             if (!fallbackToSystem) throw UnknownHostException("DoH lookup for $host failed: ${e.message}")
             Log.w(TAG, "DoH lookup for $host failed (${e.message}), using system DNS")
@@ -140,7 +145,7 @@ object DohResolver {
             val code = conn.responseCode
             if (code != 200) throw java.io.IOException("DoH server returned HTTP $code")
             val body = conn.inputStream.use { it.readBytes() }
-            return parseResponse(body, type)
+            return parseResponse(host, body, type)
         } finally {
             conn.disconnect()
         }
@@ -161,7 +166,7 @@ object DohResolver {
         return out.toByteArray()
     }
 
-    private fun parseResponse(buf: ByteArray, type: Int): Pair<List<InetAddress>, Long> {
+    private fun parseResponse(host: String, buf: ByteArray, type: Int): Pair<List<InetAddress>, Long> {
         fun u8(i: Int) = buf[i].toInt() and 0xFF
         fun u16(i: Int) = (u8(i) shl 8) or u8(i + 1)
         fun u32(i: Int) = (u16(i).toLong() shl 16) or u16(i + 2).toLong()
@@ -178,7 +183,7 @@ object DohResolver {
         }
         if (buf.size < 12) throw java.io.IOException("Short DNS response")
         val rcode = u8(3) and 0x0F
-        if (rcode == 3) throw UnknownHostException("NXDOMAIN")
+        if (rcode == 3) throw NxDomainException(host)
         if (rcode != 0) throw java.io.IOException("DNS error rcode=$rcode")
         val qd = u16(4)
         val an = u16(6)
