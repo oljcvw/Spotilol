@@ -453,7 +453,7 @@ fun SettingsScreen(
                                     checkedVersion = uc.latestVersion()
                                     Toast.makeText(
                                         updateContext,
-                                        if (available) "An update is available" else "Spotif*ck is up to date",
+                                        if (available) "An update is available" else "ReSpotifuck is up to date",
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -464,7 +464,7 @@ fun SettingsScreen(
 
                 if (hasUpdate) {
                     SettingTile(
-                        title = "Download Spotif*ck ${uc.latestVersion() ?: "update"}",
+                        title = "Download ReSpotifuck ${uc.latestVersion() ?: "update"}",
                         subtitle = "Open the signed APK from GitHub",
                         icon = Icons.AutoMirrored.Filled.OpenInNew,
                         onClick = {
@@ -535,7 +535,7 @@ fun SettingsScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
                 SettingTile(
-                    title = "Spotif*ck Version",
+                    title = "ReSpotifuck Version",
                     subtitle = "v$appVersionName",
                     icon = Icons.Default.Smartphone,
                     onClick = null
@@ -576,7 +576,7 @@ fun SettingsScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Spotif*ck is an independent community fork and is not affiliated with or endorsed by Spotify.")
+                    Text("ReSpotifuck is an independent community fork and is not affiliated with or endorsed by Spotify.")
                     Text("Third-party services may receive account, playback, and device data under their own terms and privacy policies.")
                     Text("Ad filtering and player controls modify web-player requests and behavior. Features may stop working or conflict with service terms. They do not grant rights to copy or redistribute music. Follow applicable service terms, copyright laws, and DMCA requirements.")
                     Text("The app's local proxy can decrypt and modify HTTPS traffic routed through its WebView when its CA certificate is installed. Remove that certificate from Android Settings > Security > Encryption & credentials > User credentials if you stop using the app.")

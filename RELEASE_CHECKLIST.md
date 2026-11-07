@@ -2,7 +2,7 @@
 
 ## Prepared in this change
 
-- [x] App name, launcher artwork, About screen, and repository links use the Spotif*ck branding.
+- [x] App name, launcher artwork, About screen, and repository links use the ReSpotifuck branding, and the app opens with an animated launch splash.
 - [x] In-app update checks query this fork's GitHub Releases API and fall back to signed APKs in `release-assets/` when no GitHub Release is published; Settings offers the discovered APK link.
 - [x] App activities use Android `FLAG_SECURE` to block system screenshots and screen recording.
 - [x] First launch displays a service, copyright, and local proxy certificate disclosure.

@@ -172,7 +172,7 @@ class MainActivity : ComponentActivity() {
                         TopAppBar(
                             title = {
                                 Text(
-                                    "Spotif*ck",
+                                    "ReSpotifuck",
                                     fontWeight = FontWeight.Bold
                                 )
                             },

@@ -163,7 +163,7 @@ class MediaNotificationService : Service() {
                 "Media Playback",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Spotif*ck media playback controls"
+                description = "ReSpotifuck media playback controls"
                 setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
@@ -174,7 +174,7 @@ class MediaNotificationService : Service() {
 
     @Suppress("DEPRECATION")
     private fun setupMediaSession() {
-        mediaSession = MediaSessionCompat(this, "SpotifckSession").apply {
+        mediaSession = MediaSessionCompat(this, "ReSpotifuckSession").apply {
             setFlags(
                 MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
                 MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
@@ -322,7 +322,7 @@ class MediaNotificationService : Service() {
         val builder = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
-            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Spotif*ck")
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "ReSpotifuck")
             .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentDuration)
         coverBitmap?.let { bmp ->
             builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bmp)
@@ -391,9 +391,9 @@ class MediaNotificationService : Service() {
         ).build()
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(currentTitle.ifEmpty { "Spotif*ck" })
+            .setContentTitle(currentTitle.ifEmpty { "ReSpotifuck" })
             .setContentText(currentArtist)
-            .setSubText("Spotif*ck")
+            .setSubText("ReSpotifuck")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(contentIntent)
             .setOngoing(true)

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ system splash icon: the ring draws itself, then the three waves sweep in. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="288dp"
+            android:height="288dp"
+            android:viewportWidth="288"
+            android:viewportHeight="288">
+            <group
+                android:name="logo"
+                android:pivotX="144"
+                android:pivotY="144">
+                <path
+                    android:name="disc"
+                    android:fillColor="#FF000000"
+                    android:pathData="M144,60a84,84 0,1 1,0 168a84,84 0,1 1,0 -168z" />
+                <path
+                    android:name="ring"
+                    android:pathData="M144,60a84,84 0,1 1,0 168a84,84 0,1 1,0 -168"
+                    android:strokeWidth="9"
+                    android:strokeColor="#FFD90218"
+                    android:strokeLineCap="round"
+                    android:trimPathEnd="0" />
+                <path
+                    android:name="wave1"
+                    android:pathData="M94,124Q144,100 194,124"
+                    android:strokeWidth="15"
+                    android:strokeColor="#FFD90218"
+                    android:strokeLineCap="round"
+                    android:trimPathEnd="0" />
+                <path
+                    android:name="wave2"
+                    android:pathData="M104,151Q144,131 184,151"
+                    android:strokeWidth="13"
+                    android:strokeColor="#FFD90218"
+                    android:strokeLineCap="round"
+                    android:trimPathEnd="0" />
+                <path
+                    android:name="wave3"
+                    android:pathData="M114,176Q144,162 174,176"
+                    android:strokeWidth="11"
+                    android:strokeColor="#FFD90218"
+                    android:strokeLineCap="round"
+                    android:trimPathEnd="0" />
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <target android:name="logo">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="550"
+                    android:interpolator="@android:interpolator/overshoot"
+                    android:propertyName="scaleX"
+                    android:valueFrom="0.55"
+                    android:valueTo="1" />
+                <objectAnimator
+                    android:duration="550"
+                    android:interpolator="@android:interpolator/overshoot"
+                    android:propertyName="scaleY"
+                    android:valueFrom="0.55"
+                    android:valueTo="1" />
+                <objectAnimator
+                    android:duration="700"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"
+                    android:propertyName="rotation"
+                    android:valueFrom="-90"
+                    android:valueTo="0" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="ring">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="600"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1" />
+        </aapt:attr>
+    </target>
+    <target android:name="wave1">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="300"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:startOffset="300"
+                android:valueFrom="0"
+                android:valueTo="1" />
+        </aapt:attr>
+    </target>
+    <target android:name="wave2">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="300"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:startOffset="400"
+                android:valueFrom="0"
+                android:valueTo="1" />
+        </aapt:attr>
+    </target>
+    <target android:name="wave3">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="300"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:startOffset="500"
+                android:valueFrom="0"
+                android:valueTo="1" />
+        </aapt:attr>
+    </target>
+</animated-vector>

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="art/spotifck-logo.png" alt="Spotif*ck logo" width="128" height="128">
+  <img src="art/respotifuck-logo.png" alt="ReSpotifuck logo" width="128" height="128">
 </p>
 
-<h1 align="center">Spotif*ck</h1>
+<h1 align="center">ReSpotifuck</h1>
 
 <p align="center">
   <a href="https://github.com/ReSpotF-ck/-ReSpotif-ck-App/releases/latest">
@@ -20,7 +20,7 @@
 
 <p align="center">An independent Android wrapper for Spotify's web player, with ad filtering and playback controls.</p>
 
-Spotif*ck is a community fork of [Spotilol](https://github.com/oljcvw/Spotilol), which builds on reverse-engineering work from [Spotifuck](https://github.com/deviato/Spotifuck). It is not affiliated with or endorsed by Spotify.
+ReSpotifuck is a community fork of [Spotilol](https://github.com/oljcvw/Spotilol), which builds on reverse-engineering work from [Spotifuck](https://github.com/deviato/Spotifuck). It is not affiliated with or endorsed by Spotify.
 
 ## Download
 
@@ -47,10 +47,10 @@ Get the latest APK from the [GitHub Releases page](https://github.com/ReSpotF-ck
 
 The app creates a local certificate used by its proxy. Android requires you to install it before continuing:
 
-1. Open Spotif*ck and tap **Export .pem**.
+1. Open ReSpotifuck and tap **Export .pem**.
 2. Open **Settings > Security > Encryption & credentials > Install a certificate > CA certificate**.
-3. Select **Spotifck_CA.pem** in Downloads and follow Android's prompts.
-4. Return to Spotif*ck and tap **Check**.
+3. Select **ReSpotifuck_CA.pem** in Downloads and follow Android's prompts.
+4. Return to ReSpotifuck and tap **Check**.
 
 The certificate and proxy key are stored on your device. If you clear credential storage or reinstall the app, you may need to repeat setup.
 
@@ -58,7 +58,7 @@ The certificate and proxy key are stored on your device. If you clear credential
 
 On first launch, the app explains its third-party service, copyright, ad-filtering, and proxy behavior. The proxy listens on the device only and can decrypt and modify HTTPS traffic routed through the app's WebView. Installing its CA certificate adds a trust anchor on your device; remove it from **Settings > Security > Encryption & credentials > User credentials** if you stop using the app. The proxy is not a VPN, encrypted DNS service, or anonymity tool, and it does not hide activity from Spotify or your network provider. DNS uses the device's configured resolver.
 
-Spotif*ck is an independent community project, not affiliated with Spotify. Service features can change or conflict with third-party terms. Users are responsible for complying with applicable laws, service terms, and copyright requirements. This notice is not a grant of rights to Spotify content.
+ReSpotifuck is an independent community project, not affiliated with Spotify. Service features can change or conflict with third-party terms. Users are responsible for complying with applicable laws, service terms, and copyright requirements. This notice is not a grant of rights to Spotify content.
 
 ## Build from source
 
@@ -68,7 +68,7 @@ cd -- -ReSpotif-ck-App
 ./gradlew assembleDebug
 ~~~
 
-The debug APK is written to app/build/outputs/apk/debug/.
+APKs are written to `app/build/outputs/apk/<buildType>/` as `ReSpotifuck-<version>-<buildType>.apk`.
 
 ## Contributing
 
@@ -95,4 +95,4 @@ N3K0 (MarshMeadow) is the current maintainer of the ReSpotF*ck projects.
 - Bouncy Castle, used for local certificate creation; its license notice is retained in the APK
 - Spotifuck, by Deviato, whose reverse-engineering work informed the upstream project
 
-This fork uses its own Android application ID (`com.respotfck.spotifck`, previously `com.project.lol` in Spotilol), so it installs as a separate app rather than updating Spotilol in place. After switching, log in again and install the new Spotif*ck CA certificate. Internal preference names inherited from Spotilol (`spotilol_prefs`) are kept unchanged.
+This fork uses its own Android application ID (`com.respotfck.spotifck`, previously `com.project.lol` in Spotilol), so it installs as a separate app rather than updating Spotilol in place. After switching, log in again and install the new ReSpotifuck CA certificate. Internal preference names inherited from Spotilol (`spotilol_prefs`) are kept unchanged.

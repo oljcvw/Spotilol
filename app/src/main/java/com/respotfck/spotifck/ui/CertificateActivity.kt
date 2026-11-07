@@ -1,5 +1,6 @@
 package com.respotfck.spotifck.ui
 
+import android.app.ActivityOptions
 import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
@@ -25,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,11 +47,15 @@ import androidx.compose.ui.unit.sp
 import com.respotfck.spotifck.proxy.LocalProxyManager
 import com.respotfck.spotifck.ui.theme.SpotifyTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val MonochromeAccent = Color(0xFFE0E0E0)
 private val MonochromeText = Color(0xFFFFFFFF)
+
+// Long enough for the intro animation to land; runs in parallel with proxy start-up.
+private const val MIN_SPLASH_MS = 1000L
 
 class CertificateActivity : ComponentActivity() {
 
@@ -72,6 +76,11 @@ class CertificateActivity : ComponentActivity() {
             var checkDone by remember { mutableStateOf(false) }
             var checking by remember { mutableStateOf(true) }
             val scope = rememberCoroutineScope()
+            var introDone by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                delay(MIN_SPLASH_MS)
+                introDone = true
+            }
 
             LaunchedEffect(disclosureAccepted) {
                 if (!disclosureAccepted) return@LaunchedEffect
@@ -84,15 +93,19 @@ class CertificateActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(certInstalled, checkDone) {
-                if (checkDone && certInstalled) {
-                    startActivity(Intent(this@CertificateActivity, MainActivity::class.java))
+            LaunchedEffect(certInstalled, checkDone, introDone) {
+                if (checkDone && certInstalled && introDone) {
+                    val fade = ActivityOptions.makeCustomAnimation(
+                        this@CertificateActivity, android.R.anim.fade_in, android.R.anim.fade_out
+                    )
+                    startActivity(Intent(this@CertificateActivity, MainActivity::class.java), fade.toBundle())
                     finish()
                 }
             }
 
             SpotifyTheme {
                 if (!disclosureAccepted) {
+                    LaunchSplash(status = null)
                     FirstRunDisclosure(
                         onContinue = {
                             disclosurePrefs.edit()
@@ -103,21 +116,8 @@ class CertificateActivity : ComponentActivity() {
                         onExit = { finish() }
                     )
                 } else when {
-                    checking -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator(color = MonochromeAccent)
-                            Spacer(Modifier.height(16.dp))
-                            Text(
-                                "Checking certificate...",
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                    checking || certInstalled -> {
+                        LaunchSplash(status = if (checking) "Starting secure proxy…" else null)
                     }
 
                     !certInstalled -> {
@@ -172,7 +172,7 @@ private fun FirstRunDisclosure(onContinue: () -> Unit, onExit: () -> Unit) {
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Spotif*ck is an independent community fork. It is not affiliated with or endorsed by Spotify.")
+                Text("ReSpotifuck is an independent community fork. It is not affiliated with or endorsed by Spotify.")
                 Text("This app loads third-party music services. They may receive your account, playback, and device data under their own terms and privacy policies.")
                 Text("Ad filtering and player controls modify web-player requests and behavior. They may stop working, may conflict with service terms, and do not grant rights to copy or redistribute music. Use services and content lawfully and respect copyright and DMCA requirements.")
                 Text("The app uses a proxy bound to this device to modify traffic from its WebView. Installing the app’s CA certificate lets the local proxy decrypt and change HTTPS traffic routed through it. Do not install it if you do not trust this app. You can remove it later under Android Settings > Security > Encryption & credentials > User credentials.")
@@ -210,7 +210,7 @@ fun CACertDialog(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "Spotif*ck uses a local certificate to bypass Spotify's WebView restrictions. Install it once to continue.",
+            text = "ReSpotifuck uses a local certificate to bypass Spotify's WebView restrictions. Install it once to continue.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
             textAlign = TextAlign.Center
@@ -228,7 +228,7 @@ fun CACertDialog(
                 Spacer(Modifier.height(12.dp))
                 Step(2, "Go to Settings > Security > Encryption & credentials > Install a certificate > CA certificate")
                 Spacer(Modifier.height(12.dp))
-                Step(3, "Select the file Spotifck_CA.pem from your Downloads folder")
+                Step(3, "Select the file ReSpotifuck_CA.pem from your Downloads folder")
                 Spacer(Modifier.height(12.dp))
                 Step(4, "When prompted, choose \"Install anyway\"")
                 Spacer(Modifier.height(12.dp))

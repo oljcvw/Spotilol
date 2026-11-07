@@ -28,7 +28,7 @@ class UpdateChecker(private val context: Context) {
         private const val KEY_RELEASE_URL = "latestReleaseUrl"
         private const val KEY_APK_URL = "latestReleaseApkUrl"
         private const val CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L
-        private val RELEASE_APK_PATTERN = Regex("^Spotifck-([0-9]+(?:\\.[0-9]+)*)-release\\.apk$", RegexOption.IGNORE_CASE)
+        private val RELEASE_APK_PATTERN = Regex("^(?:ReSpotifuck|Spotifck)-([0-9]+(?:\\.[0-9]+)*)-release\\.apk$", RegexOption.IGNORE_CASE)
     }
 
     fun hasUpdateAvailable(): Boolean {
@@ -110,10 +110,9 @@ class UpdateChecker(private val context: Context) {
 
     private fun findReleaseApk(assets: JSONArray?, version: String): String? {
         if (assets == null) return null
-        val expectedName = "Spotifck-$version-release.apk"
         for (i in 0 until assets.length()) {
             val asset = assets.optJSONObject(i) ?: continue
-            if (asset.optString("name").equals(expectedName, ignoreCase = true)) {
+            if (isReleaseApkName(asset.optString("name"), version)) {
                 return asset.optString("browser_download_url").takeIf(String::isNotBlank)
             }
         }
@@ -122,15 +121,18 @@ class UpdateChecker(private val context: Context) {
 
     private fun findDirectoryApk(version: String): String? {
         val entries = requestBody(ASSETS_API_URL)?.let { runCatching { JSONArray(it) }.getOrNull() } ?: return null
-        val expectedName = "Spotifck-$version-release.apk"
         for (i in 0 until entries.length()) {
             val entry = entries.optJSONObject(i) ?: continue
-            if (entry.optString("name").equals(expectedName, ignoreCase = true)) {
+            if (isReleaseApkName(entry.optString("name"), version)) {
                 return entry.optString("download_url").takeIf(String::isNotBlank)
             }
         }
         return null
     }
+
+    // Releases up to 1.0.7 were published as Spotifck-<version>-release.apk.
+    private fun isReleaseApkName(name: String, version: String): Boolean =
+        RELEASE_APK_PATTERN.matchEntire(name)?.groupValues?.get(1) == version
 
     private fun findLatestDirectoryRelease(): ReleaseInfo? {
         val entries = requestBody(ASSETS_API_URL)?.let { runCatching { JSONArray(it) }.getOrNull() } ?: return null
@@ -152,7 +154,7 @@ class UpdateChecker(private val context: Context) {
             connection.requestMethod = "GET"
             connection.setRequestProperty("Accept", "application/vnd.github+json")
             connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-            connection.setRequestProperty("User-Agent", "Spotifck-Android")
+            connection.setRequestProperty("User-Agent", "ReSpotifuck-Android")
             connection.connectTimeout = 8000
             connection.readTimeout = 8000
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null

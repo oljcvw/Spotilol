@@ -71,12 +71,12 @@ jobs:
         shell: bash
         run: |
           APK_DIR="app/build/outputs/apk/$BUILD_TYPE_LOWER"
-          APK_PATH="$APK_DIR/app-$BUILD_TYPE_LOWER.apk"
-          OUTPUT_NAME="spotifck-$BUILD_TYPE_LOWER-$GITHUB_RUN_NUMBER.apk"
+          APK_PATH="$(ls "$APK_DIR"/ReSpotifuck-*-"$BUILD_TYPE_LOWER".apk 2>/dev/null | head -n1)"
+          OUTPUT_NAME="respotifuck-$BUILD_TYPE_LOWER-$GITHUB_RUN_NUMBER.apk"
 
-          if [[ ! -f "$APK_PATH" ]]; then
-            APK_PATH="$APK_DIR/app-$BUILD_TYPE_LOWER-unsigned.apk"
-            OUTPUT_NAME="spotifck-$BUILD_TYPE_LOWER-unsigned-$GITHUB_RUN_NUMBER.apk"
+          if [[ -z "$APK_PATH" ]]; then
+            APK_PATH="$(ls "$APK_DIR"/ReSpotifuck-*-"$BUILD_TYPE_LOWER"-unsigned.apk | head -n1)"
+            OUTPUT_NAME="respotifuck-$BUILD_TYPE_LOWER-unsigned-$GITHUB_RUN_NUMBER.apk"
           fi
 
           test -f "$APK_PATH"
@@ -85,8 +85,8 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: spotifck-${{ env.BUILD_TYPE_LOWER }}-apk
-          path: app/build/outputs/apk/${{ env.BUILD_TYPE_LOWER }}/spotifck-*.apk
+          name: respotifuck-${{ env.BUILD_TYPE_LOWER }}-apk
+          path: app/build/outputs/apk/${{ env.BUILD_TYPE_LOWER }}/respotifuck-*.apk
           overwrite: true
           retention-days: 14
           archive: false
