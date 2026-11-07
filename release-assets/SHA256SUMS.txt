@@ -1,1 +1,2 @@
-83cc253fc64aa9b548749ef1d258132013786aa3637c900b80b7f3dff164355e  Spotifck-1.0.7-release.apk
+c64dad67075f0b697ef867fcaabdc879d42405fde3b0778adce5a0b0cb7fdacd  ReSpotifuck-1.0.8-release.apk
+d3030cff4bb62185e3c750697ef4e6b21299714ac0f75be99b7af102a1ebdb11  ReSpotifuck-1.0.8-debug.apk
