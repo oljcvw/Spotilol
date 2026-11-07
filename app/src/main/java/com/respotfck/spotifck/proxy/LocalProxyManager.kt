@@ -19,6 +19,7 @@ import org.bouncycastle.asn1.x509.GeneralNames
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
+import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
@@ -61,7 +62,9 @@ object LocalProxyManager {
     @Volatile private var caKeyPair: KeyPair? = null
     @Volatile private var caCert: X509Certificate? = null
 	@Volatile private var leafKeyPair: KeyPair? = null
-    private val threadPool = Executors.newFixedThreadPool(32)
+    // Each CONNECT tunnel occupies a worker for its whole keep-alive lifetime, so a fixed-size
+    // pool makes new tunnels queue behind idle ones and stalls page/image loads.
+    private val threadPool = Executors.newCachedThreadPool()
 
     private val sslContextCache = Collections.synchronizedMap(HashMap<String, SSLContext>())
 
@@ -206,19 +209,21 @@ object LocalProxyManager {
 
     fun start() {
         if (serverSocket != null) return
+        // Bind synchronously so callers can use isRunning/port immediately without sleeping.
+        val server = try {
+            ServerSocket(0, 128, java.net.InetAddress.getByName("127.0.0.1"))
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start proxy", e)
+            return
+        }
+        serverSocket = server
+        Log.d(TAG, "Proxy started on port ${server.localPort}")
         threadPool.execute {
-            try {
-                serverSocket = ServerSocket(0, 128, java.net.InetAddress.getByName("127.0.0.1"))
-                Log.d(TAG, "Proxy started on port ${serverSocket!!.localPort}")
-
-                while (!serverSocket!!.isClosed) {
-                    try {
-                        val client = serverSocket!!.accept()
-                        threadPool.execute { handleConnection(client) }
-                    } catch (_: Exception) {}
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to start proxy", e)
+            while (!server.isClosed) {
+                try {
+                    val client = server.accept()
+                    threadPool.execute { handleConnection(client) }
+                } catch (_: Exception) {}
             }
         }
     }
@@ -305,6 +310,7 @@ object LocalProxyManager {
         }
 
         socket.soTimeout = 30000
+        socket.tcpNoDelay = true
         socket.startHandshake()
 
         val hostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier()
@@ -318,6 +324,7 @@ object LocalProxyManager {
 
     private fun handleConnection(client: Socket) {
         client.soTimeout = 30000
+        client.tcpNoDelay = true
         try {
             val requestLine = readLine(client.inputStream) ?: return
 
@@ -389,9 +396,9 @@ object LocalProxyManager {
             }
             upstreamSSLSocket = upstream
 
-            val clientIn = clientSocket.inputStream
+            val clientIn = BufferedInputStream(clientSocket.inputStream, STREAM_BUFFER_BYTES)
             val clientOut = clientSocket.outputStream
-            var upstreamIn = upstream.inputStream
+            var upstreamIn = BufferedInputStream(upstream.inputStream, STREAM_BUFFER_BYTES)
             var upstreamOut = upstream.outputStream
 
             if (useHttp2) {
@@ -414,7 +421,7 @@ object LocalProxyManager {
                         upstream = openUpstreamSocket(host, targetPort, useHttp2)
                         upstreamSSLSocket = upstream
                         fromPool = false
-                        upstreamIn = upstream.inputStream
+                        upstreamIn = BufferedInputStream(upstream.inputStream, STREAM_BUFFER_BYTES)
                         upstreamOut = upstream.outputStream
                         writeHead(reqHead, upstreamOut)
                     }
@@ -458,7 +465,7 @@ object LocalProxyManager {
                     val keepAlive = !reqConnection.equals("close", ignoreCase = true) &&
                         !respConnection.equals("close", ignoreCase = true)
 
-                    reuseUpstream = keepAlive
+                    reuseUpstream = keepAlive && upstreamIn.available() == 0
                     if (!keepAlive) break
                 }
             }
@@ -470,6 +477,8 @@ object LocalProxyManager {
             upstreamSSLSocket?.let { releaseUpstreamSocket(host, targetPort, it, reuseUpstream) }
         }
     }
+
+    private const val STREAM_BUFFER_BYTES = 16 * 1024
 
     private data class HttpHead(
         val statusLine: String,
@@ -737,6 +746,10 @@ object LocalProxyManager {
     }
 
     fun isCAInstalled(): Boolean {
+        if (isCAInUserTrustStore()) {
+            Log.d(TAG, "CA is installed (found in AndroidCAStore)")
+            return true
+        }
         if (!isRunning) return false
 
         return try {
@@ -782,6 +795,18 @@ object LocalProxyManager {
             false
         } catch (e: Exception) {
             Log.e(TAG, "CA check error", e)
+            false
+        }
+    }
+
+    // Local trust-store lookup; avoids a network round trip through the proxy on every launch.
+    private fun isCAInUserTrustStore(): Boolean {
+        val cert = caCert ?: return false
+        return try {
+            val store = KeyStore.getInstance("AndroidCAStore").apply { load(null) }
+            store.getCertificateAlias(cert) != null
+        } catch (e: Exception) {
+            Log.w(TAG, "AndroidCAStore lookup failed", e)
             false
         }
     }

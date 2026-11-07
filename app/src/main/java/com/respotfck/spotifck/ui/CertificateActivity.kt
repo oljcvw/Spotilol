@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.sp
 import com.respotfck.spotifck.proxy.LocalProxyManager
 import com.respotfck.spotifck.ui.theme.SpotifyTheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -79,7 +78,6 @@ class CertificateActivity : ComponentActivity() {
                 withContext(Dispatchers.IO) {
                     LocalProxyManager.init(this@CertificateActivity)
                     LocalProxyManager.start()
-                    delay(800)
                     certInstalled = LocalProxyManager.isCAInstalled()
                     checkDone = true
                     checking = false
@@ -136,7 +134,6 @@ class CertificateActivity : ComponentActivity() {
                                     withContext(Dispatchers.IO) {
                                         if (!LocalProxyManager.isRunning) {
                                             LocalProxyManager.start()
-                                            delay(500)
                                         }
                                         certInstalled = LocalProxyManager.isCAInstalled()
                                     }

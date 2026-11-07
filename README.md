@@ -95,4 +95,4 @@ N3K0 (MarshMeadow) is the current maintainer of the ReSpotF*ck projects.
 - Bouncy Castle, used for local certificate creation; its license notice is retained in the APK
 - Spotifuck, by Deviato, whose reverse-engineering work informed the upstream project
 
-This fork keeps the existing Android application ID so existing installations can update in place. The rebrand changes the displayed app name and release links, while retaining the inherited package and stored preference identifiers for upgrade compatibility.
+This fork uses its own Android application ID (`com.respotfck.spotifck`, previously `com.project.lol` in Spotilol), so it installs as a separate app rather than updating Spotilol in place. After switching, log in again and install the new Spotif*ck CA certificate. Internal preference names inherited from Spotilol (`spotilol_prefs`) are kept unchanged.
