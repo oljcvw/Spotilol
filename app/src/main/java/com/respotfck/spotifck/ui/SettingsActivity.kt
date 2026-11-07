@@ -1,5 +1,10 @@
 package com.respotfck.spotifck.ui
 
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Web
 import com.respotfck.spotifck.webview.WebEngine
 import android.content.Context
@@ -1111,6 +1116,53 @@ fun SettingsScreen(
                             Intent(Intent.ACTION_VIEW, Uri.parse("https://marshmeadow.netlify.app"))
                         )
                     }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                var showGuide by remember { mutableStateOf(false) }
+                SettingTile(
+                    title = "Beginner guide",
+                    subtitle = "New here? How to set up and use ReSpotifuck",
+                    icon = Icons.Default.School,
+                    onClick = { showGuide = true }
+                )
+                if (showGuide) BeginnerGuideDialog(onDismiss = { showGuide = false })
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
+                    title = "Download page",
+                    subtitle = "respotfck.netlify.app · latest APKs and install steps",
+                    icon = Icons.Default.Download,
+                    onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://respotfck.netlify.app/download.html"))) }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
+                    title = "ReSpotF-ck on GitHub",
+                    subtitle = "All project repositories",
+                    icon = Icons.Default.Groups,
+                    onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ReSpotF-ck"))) }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
+                    title = "Music-Resources",
+                    subtitle = "Index of open-source music apps and tools",
+                    icon = Icons.Default.LibraryMusic,
+                    onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ReSpotF-ck/Music-Resources"))) }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
+                    title = "Report a problem",
+                    subtitle = "Open an issue on GitHub",
+                    icon = Icons.Default.BugReport,
+                    onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ReSpotF-ck/-ReSpotif-ck-App/issues"))) }
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))

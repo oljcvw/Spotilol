@@ -111,6 +111,7 @@ class MainActivity : ComponentActivity() {
     private var enginePageOk = false
     private val networkWarning = mutableStateOf<NetWarning?>(null)
     private val showServiceOffWarning = mutableStateOf(false)
+    private val showGuideOnce = mutableStateOf(false)
     private val dismissedWarning = mutableStateOf<String?>(null)
     private var serviceStarted = false
 
@@ -153,6 +154,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         engineState.value = WebEngine.active(getSharedPreferences("spotilol_prefs", MODE_PRIVATE))
+        showGuideOnce.value = !getSharedPreferences("spotilol_prefs", MODE_PRIVATE).getBoolean("GuideShown", false)
         AppLock.applyScreenCapturePolicy(window)
 
         // After an OOM kill, Android can resume directly at MainActivity
@@ -442,6 +444,12 @@ class MainActivity : ComponentActivity() {
                         },
                         dismissButton = { TextButton(onClick = { showServiceOffWarning.value = false }) { Text("Cancel") } }
                     )
+                }
+                if (showGuideOnce.value) {
+                    BeginnerGuideDialog(onDismiss = {
+                        showGuideOnce.value = false
+                        getSharedPreferences("spotilol_prefs", MODE_PRIVATE).edit().putBoolean("GuideShown", true).apply()
+                    })
                 }
                 AppLockOverlay()
             }
