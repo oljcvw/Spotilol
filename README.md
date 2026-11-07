@@ -5,6 +5,8 @@
 <h1 align="center">ReSpotifuck</h1>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Status-Online-2ea44f?style=for-the-badge&labelColor=0d0d0d" alt="status: online">
+  &nbsp;
   <a href="https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/release-assets">
     <img src="https://img.shields.io/badge/Download-APK-E60023?style=for-the-badge&logo=android&logoColor=white&labelColor=0d0d0d" alt="download APK">
   </a>
@@ -27,6 +29,8 @@
 ReSpotifuck is a community fork of [Spotilol](https://github.com/oljcvw/Spotilol), which builds on reverse-engineering work from [Spotifuck](https://github.com/deviato/Spotifuck). It is not affiliated with or endorsed by Spotify.
 
 ## Download
+
+> **Note:** ReSpotifuck downloads are not publicly listed or advertised. You have to search for them; they are not on app stores or download sites.
 
 <p>
   <a href="https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/release-assets"><img src="https://img.shields.io/badge/Download%20ReSpotifuck-APK-E60023?style=for-the-badge&logo=android&logoColor=white&labelColor=0d0d0d" alt="Download ReSpotifuck APK"></a>
