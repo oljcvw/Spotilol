@@ -305,11 +305,19 @@ class SpotifyWebViewClient(
             var featVer='web-player_'+new Date().toISOString().split('T')[0]+'_'+Date.now()+'_'+Math.floor(Math.random()*0xFFFFFFF).toString(16).padStart(7,'0');
             var lastState=null,lastPos=null,playing=false;
             var pfint=null,afint=null,cssint=null,aaint=null;
+            window.rsW=function(){return document.querySelector('[data-testid=now-playing-widget-v2]')||document.querySelector('[data-testid=now-playing-widget]');};
+            window.rsTrackEl=function(){var w=rsW();return (w&&w.querySelector('a[data-testid=context-item-link]'))||document.querySelector('aside[data-testid=now-playing-bar] a[data-testid=context-item-link]');};
+            window.rsArtistEls=function(){var w=rsW();if(!w)return [];var b=w.querySelector('[data-testid=now-playing-widget-v2-byline]');var l=b?b.querySelectorAll('a'):w.querySelectorAll('a[data-testid=context-item-info-artist],a[data-testid=context-item-info-show]');return [].slice.call(l);};
+            window.rsArtist=function(){return rsArtistEls().map(function(a){return a.textContent;}).join(', ');};
+            window.rsCover=function(){var w=rsW();var i=w&&w.querySelector('img[data-testid=cover-art-image]');var s=i&&(i.currentSrc||i.src);return s&&s.indexOf('http')===0?s:null;};
+            window.rsFavBtn=function(){var w=rsW();if(!w)return null;return w.querySelector('button[aria-checked]')||w.querySelector(':scope>div:last-child>button');};
+            window.rsShuffleBtn=function(){return document.querySelector('button[data-testid=control-button-shuffle]')||document.querySelector('aside[data-testid=now-playing-bar] [data-testid=player-controls] button[aria-label*=huffle]');};
+            window.rsShuffleOn=function(){var b=rsShuffleBtn();if(!b)return false;var c=b.getAttribute('aria-checked');if(c!==null)return c==='true';return !/^enable shuffle/i.test(b.getAttribute('aria-label')||'');};
         """
 
         private const val MEDIA_UPDATER = """
             window.updMedia = function(){
-                var currState=track+'|'+artist+'|'+playing+'|'+repmode+'|'+isfav;
+                var currState=track+'|'+artist+'|'+playing+'|'+repmode+'|'+isfav+'|'+cover+'|'+duration;
                 if(currState!==lastState) {
                     lastState=currState;
                     var values={artist:artist,track:track,playing:playing,repeat:repmode,fav:isfav,duration:duration,position:position,cover:cover};
@@ -426,7 +434,7 @@ class SpotifyWebViewClient(
                 }
             };
             window.actAddToFav = function() {
-                var fb = document.querySelector('div[data-testid=now-playing-widget]>div:last-child>button');
+                var fb = rsFavBtn();
                 if(fb) {
                     if(fb.getAttribute('aria-checked')==='false') {
                         fb.click();
@@ -553,25 +561,22 @@ class SpotifyWebViewClient(
             window.addAndAuto = function(){
                 if(aaint) clearInterval(aaint);
                 aaint = setInterval(function(){
-                    var ta = document.querySelector('a[data-testid=context-item-link]');
-                    if(ta) track=ta.text; else track=null;
-                    var aa = document.querySelector('a[data-testid=context-item-info-artist]');
-                    if(!aa) aa = document.querySelector('a[data-testid=context-item-info-show]');
-                    if(aa) artist=aa.text; else artist='';
+                    var ta = rsTrackEl();
+                    if(ta) track=ta.textContent; else track=null;
+                    artist = rsArtist();
                     var rr = document.querySelector('button[data-testid=control-button-repeat]');
                     if(rr) repmode=rr.getAttribute('aria-checked'); else repmode='false';
-                    var fb = document.querySelector('div[data-testid=now-playing-widget]>div:last-child>button');
+                    var fb = rsFavBtn();
                     if(fb && fb.getAttribute('aria-checked')==='true') isfav=true; else isfav=false;
                     var pb = document.querySelector('button[data-testid=control-button-playpause]');
                     if(pb) playing=pb.getAttribute('aria-label')!=='Play';
                     var rg = document.querySelector('div[data-testid=playback-progressbar] input[type=range]');
                     if(rg) { duration=parseInt(rg.getAttribute('max')); position=parseInt(rg.getAttribute('value')); }
                     else { duration=null; position=null; }
-                    var im = document.querySelector('img[data-testid=cover-art-image]');
-                    if(im) {
-                        var s=im.src;
+                    var s = rsCover();
+                    if(s) {
                         if(s.indexOf('i.scdn.co')!==-1) {
-                            s=s.replace(/ab67616d0000[0-9a-f]{4}/,'ab67616d000082c1');
+                            s=s.replace(/ab67616d0000[0-9a-f]{4}/,'ab67616d0000b273');
                             s=s.replace(/ab6761670000[0-9a-f]{4}/,'ab676167000082e8');
                         }
                         cover=s;
@@ -653,7 +658,7 @@ class SpotifyWebViewClient(
                 pl.id='spotilolPlayerControls';
                 pl.innerHTML=''
                     +'<div class="spl-top">'
-                    +'<div class="spl-cover"><img id="spl-cover-img" src="" alt=""></div>'
+                    +'<div class="spl-cover"><img id="spl-cover-img" alt="" style="visibility:hidden"></div>'
                     +'<div class="spl-info"><div class="spl-track" id="spl-track">No track</div>'
                     +'<div class="spl-artist" id="spl-artist">\u2014</div></div>'
                     +'</div>'
@@ -685,7 +690,7 @@ class SpotifyWebViewClient(
                 document.getElementById('spl-prev').onclick=function(){actSkipBack()};
                 document.getElementById('spl-next').onclick=function(){actSkipForward()};
                 document.getElementById('spl-play').onclick=function(){var pb=document.querySelector('button[data-testid=control-button-playpause]');actPlayPause(pb&&pb.getAttribute('aria-label')==='Play')};
-                document.getElementById('spl-shuffle').onclick=function(){var sb=document.querySelector('button[data-testid=control-button-shuffle]');if(sb)sb.click()};
+                document.getElementById('spl-shuffle').onclick=function(){var sb=rsShuffleBtn();if(sb)sb.click()};
                 document.getElementById('spl-repeat').onclick=function(){actRepeat()};
                 document.getElementById('spl-lyrics').onclick=function(){if(this.classList.contains('spl-disabled'))return;if(typeof closeNowPlay==='function') closeNowPlay();var lb=document.querySelector('button[data-testid=lyrics-button]');if(lb&&!lb.disabled)lb.click()};
                 document.getElementById('spl-queue').onclick=function(){var qb=document.querySelector('button[data-testid=control-button-queue]');if(qb)qb.click()};
@@ -700,13 +705,12 @@ class SpotifyWebViewClient(
                 splArtist.style.cursor='pointer';
                 splTrack.onclick=function(){
                     if(typeof closeNowPlay==='function') closeNowPlay();
-                    var rl=document.querySelector('a[data-testid=context-item-link]');
+                    var rl=rsTrackEl();
                     if(rl){rl.click();}
                 };
                 splArtist.onclick=function(){
                     if(typeof closeNowPlay==='function') closeNowPlay();
-                    var al=document.querySelector('a[data-testid=context-item-info-artist]');
-                    if(!al) al=document.querySelector('a[data-testid=context-item-info-show]');
+                    var al=rsArtistEls()[0];
                     if(al){al.click();}
                 };
 
@@ -735,37 +739,41 @@ class SpotifyWebViewClient(
                     var ly=document.getElementById('spl-lyrics');
                     var tm=document.getElementById('spl-timer');
 
-                    var npb=document.querySelector('[data-testid="now-playing-widget"]');
-                    var imgEl=npb?npb.querySelector('img[data-testid="cover-art-image"]'):null;
-                    if(ci&&imgEl&&imgEl.src&&ci.src!==imgEl.src) ci.src=imgEl.src;
+                    var coverSrc=rsCover();
+                    if(ci){
+                        if(coverSrc){
+                            if(ci.getAttribute('src')!==coverSrc){ci.style.visibility='hidden';ci.onload=function(){this.style.visibility='visible'};ci.onerror=function(){this.style.visibility='hidden'};ci.src=coverSrc;}
+                        } else if(ci.hasAttribute('src')){ci.removeAttribute('src');ci.style.visibility='hidden';}
+                    }
 
-                    var trackEl=document.querySelector('a[data-testid=context-item-link]');
-                    if(tk&&trackEl&&trackEl.textContent&&tk.textContent!==trackEl.textContent) tk.textContent=trackEl.textContent;
+                    var trackEl=rsTrackEl();
+                    var trackTxt=trackEl?trackEl.textContent:'';
+                    if(tk){var nt=trackTxt||'No track';if(tk.textContent!==nt) tk.textContent=nt;}
 
-                    var artistEl=document.querySelector('a[data-testid=context-item-info-artist]');
-                    if(!artistEl) artistEl=document.querySelector('a[data-testid=context-item-info-show]');
-                    if(ar&&artistEl&&tk.textContent!=='No track') ar.textContent=artistEl.textContent||'';
+                    if(ar){var na=trackTxt?(rsArtist()||''):'\u2014';if(ar.textContent!==na) ar.textContent=na;}
 
                     var rg=document.querySelector('[data-testid="playback-progressbar"] input[type=range]');
-                    if(pp){
-                        var pb=document.querySelector('button[data-testid=control-button-playpause]');
-                        var isPlaying=pb&&pb.getAttribute('aria-label')!=='Play';
+                    var pb=document.querySelector('button[data-testid=control-button-playpause]');
+                    var isPlaying=!!(pb&&pb.getAttribute('aria-label')!=='Play');
+                    if(pp&&pp.dataset.st!==String(isPlaying)){
+                        pp.dataset.st=String(isPlaying);
+                        pp.setAttribute('aria-label',isPlaying?'Pause':'Play');
                         pp.innerHTML=isPlaying
                             ?'<svg viewBox="0 0 16 16" width="22" height="22"><path fill="currentColor" d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/></svg>'
                             :'<svg viewBox="0 0 16 16" width="22" height="22"><path fill="currentColor" d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288z"/></svg>';
                     }
-                    if(sh){
-                        var sb=document.querySelector('button[data-testid=control-button-shuffle]');
-                        sh.classList.toggle('spl-active',sb&&sb.getAttribute('aria-checked')==='true');
-                    }
+                    if(sh) sh.classList.toggle('spl-active',rsShuffleOn());
                     if(rp){
                         var rr=document.querySelector('button[data-testid=control-button-repeat]');
-                        rp.classList.toggle('spl-active',rr&&rr.getAttribute('aria-checked')==='true');
+                        var rm=rr?rr.getAttribute('aria-checked'):'false';
+                        rp.classList.toggle('spl-active',rm==='true'||rm==='mixed');
+                        rp.classList.toggle('spl-one',rm==='mixed');
                     }
                     if(lk){
-                        var fb=document.querySelector('div[data-testid=now-playing-widget]>div:last-child>button');
+                        var fb=rsFavBtn();
                         var liked=fb&&fb.getAttribute('aria-checked')==='true';
                         lk.classList.toggle('spl-active',liked===true);
+                        lk.setAttribute('aria-label',liked?'Remove from Liked Songs':'Add to Liked Songs');
                     }
                     var lb=document.querySelector('button[data-testid=lyrics-button]');
                     if(lb){

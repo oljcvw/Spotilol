@@ -83,6 +83,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.SettingsEthernet
+import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.SettingsBackupRestore
+import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -104,7 +116,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.webkit.WebViewCompat
+import com.respotfck.spotifck.proxy.DnsBlockedException
+import com.respotfck.spotifck.proxy.DnsSettings
+import com.respotfck.spotifck.proxy.DohResolver
 import com.respotfck.spotifck.proxy.LocalProxyManager
+import com.respotfck.spotifck.proxy.ProxySettings
 import com.respotfck.spotifck.update.UpdateChecker
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -194,6 +210,23 @@ fun SettingsScreen(
     var swipeStop by remember { mutableStateOf(prefs.getBoolean("SwipeStop", true)) }
     var btAutoPause by remember { mutableStateOf(prefs.getBoolean("BtAutoPause", false)) }
     var btAutoResume by remember { mutableStateOf(prefs.getBoolean("BtAutoResume", false)) }
+
+    var proxyEnabled by remember { mutableStateOf(ProxySettings.enabled(prefs)) }
+    var proxyPort by remember { mutableStateOf(ProxySettings.port(prefs)) }
+    var proxyReuse by remember { mutableStateOf(ProxySettings.reuseConnections(prefs)) }
+    var dnsEnabled by remember { mutableStateOf(DnsSettings.enabled(prefs)) }
+    var dnsFallback by remember { mutableStateOf(DnsSettings.fallback(prefs)) }
+    var dnsSummary by remember { mutableStateOf(DnsSettings.summary(prefs)) }
+    var proxyRestartNeeded by remember { mutableStateOf(false) }
+    var showPortDialog by remember { mutableStateOf(false) }
+    var showDnsDialog by remember { mutableStateOf(false) }
+    var netTestResult by remember { mutableStateOf<String?>(null) }
+    var netTesting by remember { mutableStateOf(false) }
+    val netScope = rememberCoroutineScope()
+    fun applyDns() {
+        DohResolver.configure(prefs)
+        dnsSummary = DnsSettings.summary(prefs)
+    }
 
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showClearDataDialog by remember { mutableStateOf(false) }
@@ -474,6 +507,102 @@ fun SettingsScreen(
             }
 
             SettingSectionCard(
+                title = "PROXY & DNS",
+                icon = Icons.Default.Dns
+            ) {
+                val context = LocalContext.current
+                SettingSwitchTile(
+                    title = "Local proxy",
+                    subtitle = if (proxyEnabled) {
+                        "On · port " + (if (proxyPort == 0) "automatic" else proxyPort.toString()) +
+                            (if (LocalProxyManager.isRunning) " (running on ${LocalProxyManager.port})" else "")
+                    } else "Off · Spotify may refuse the web player and DNS settings won't apply",
+                    icon = Icons.Default.SettingsEthernet,
+                    checked = proxyEnabled,
+                    onCheckedChange = {
+                        proxyEnabled = it
+                        prefs.edit().putBoolean(ProxySettings.ENABLED, it).apply()
+                        proxyRestartNeeded = true
+                    }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                SettingTile(
+                    title = "Proxy port",
+                    subtitle = if (proxyPort == 0) "Automatic (recommended)" else "Fixed: $proxyPort",
+                    icon = Icons.Default.Router,
+                    onClick = { showPortDialog = true }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                SettingSwitchTile(
+                    title = "Reuse connections",
+                    subtitle = "Keep Spotify connections open between requests (faster)",
+                    icon = Icons.Default.Speed,
+                    checked = proxyReuse,
+                    onCheckedChange = {
+                        proxyReuse = it
+                        prefs.edit().putBoolean(ProxySettings.REUSE, it).apply()
+                        LocalProxyManager.reuseConnections = it
+                    }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                SettingSwitchTile(
+                    title = "Secure DNS (DNS-over-HTTPS)",
+                    subtitle = dnsSummary,
+                    icon = Icons.Default.Dns,
+                    checked = dnsEnabled,
+                    onCheckedChange = {
+                        dnsEnabled = it
+                        prefs.edit().putBoolean(DnsSettings.ENABLED, it).apply()
+                        applyDns()
+                    }
+                )
+                if (dnsEnabled) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                    SettingTile(
+                        title = "DNS provider",
+                        subtitle = DnsSettings.endpoint(prefs),
+                        icon = Icons.Default.Public,
+                        onClick = { showDnsDialog = true }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                    SettingSwitchTile(
+                        title = "Fall back to device DNS",
+                        subtitle = "If the DNS provider can't be reached",
+                        icon = Icons.Default.SettingsBackupRestore,
+                        checked = dnsFallback,
+                        onCheckedChange = {
+                            dnsFallback = it
+                            prefs.edit().putBoolean(DnsSettings.FALLBACK, it).apply()
+                            applyDns()
+                        }
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                SettingTile(
+                    title = if (netTesting) "Testing…" else "Test proxy & DNS",
+                    subtitle = "Resolve and connect to Spotify through the current settings",
+                    icon = Icons.Default.NetworkCheck,
+                    onClick = {
+                        if (netTesting) return@SettingTile
+                        netTesting = true
+                        netScope.launch {
+                            netTestResult = withContext(Dispatchers.IO) { runNetworkTest(prefs) }
+                            netTesting = false
+                        }
+                    }
+                )
+                if (proxyRestartNeeded) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                    SettingTile(
+                        title = "Restart to apply proxy changes",
+                        subtitle = "Restarts ReSpotifuck with the new proxy settings",
+                        icon = Icons.Default.RestartAlt,
+                        onClick = { restartForProxyChange(context) }
+                    )
+                }
+            }
+
+            SettingSectionCard(
                 title = "SECURITY & NETWORK",
                 icon = Icons.Default.Shield
             ) {
@@ -718,12 +847,112 @@ fun SettingsScreen(
                     Text("Third-party services may receive account, playback, and device data under their own terms and privacy policies.")
                     Text("Ad filtering and player controls modify web-player requests and behavior. Features may stop working or conflict with service terms. They do not grant rights to copy or redistribute music. Follow applicable service terms, copyright laws, and DMCA requirements.")
                     Text("The app's local proxy can decrypt and modify HTTPS traffic routed through its WebView when its CA certificate is installed. Remove that certificate from Android Settings > Security > Encryption & credentials > User credentials if you stop using the app.")
-                    Text("The proxy is not a VPN, encrypted DNS service, or anonymity tool. Spotify and network providers can still observe activity, and DNS uses the device's configured resolver.")
+                    Text("The proxy is not a VPN, encrypted DNS service, or anonymity tool. Spotify and network providers can still observe activity, and DNS for proxied Spotify traffic uses encrypted DNS-over-HTTPS (AdGuard by default) unless you turn it off in Settings › Proxy & DNS.")
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showPrivacyNotice = false }) { Text("Close") }
             }
+        )
+    }
+
+    if (showPortDialog) {
+        var text by remember { mutableStateOf(if (proxyPort == 0) "" else proxyPort.toString()) }
+        val parsed = text.trim().toIntOrNull()
+        val valid = text.isBlank() || (parsed != null && parsed in 1024..65535)
+        AlertDialog(
+            onDismissRequest = { showPortDialog = false },
+            title = { Text("Proxy port", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Leave empty to pick a free port automatically. Fixed ports must be 1024–65535; if it's in use, an automatic port is used instead.")
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { v -> text = v.filter { it.isDigit() }.take(5) },
+                        singleLine = true,
+                        isError = !valid,
+                        placeholder = { Text("Automatic") },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = valid, onClick = {
+                    val port = if (text.isBlank()) 0 else parsed ?: 0
+                    if (port != proxyPort) {
+                        proxyPort = port
+                        prefs.edit().putInt(ProxySettings.PORT, port).apply()
+                        proxyRestartNeeded = true
+                    }
+                    showPortDialog = false
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { showPortDialog = false }) { Text("Cancel") } }
+        )
+    }
+
+    if (showDnsDialog) {
+        var selected by remember { mutableStateOf(DnsSettings.provider(prefs).key) }
+        var custom by remember { mutableStateOf(DnsSettings.customUrl(prefs)) }
+        val customValid = selected != "custom" || DnsSettings.isValidDohUrl(custom)
+        AlertDialog(
+            onDismissRequest = { showDnsDialog = false },
+            title = { Text("DNS provider", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    DnsSettings.providers.forEach { p ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { selected = p.key }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = selected == p.key, onClick = { selected = p.key })
+                            Column {
+                                Text(p.label)
+                                if (p.url.isNotEmpty()) Text(
+                                    p.url,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    if (selected == "custom") {
+                        OutlinedTextField(
+                            value = custom,
+                            onValueChange = { custom = it.trim() },
+                            singleLine = true,
+                            isError = !customValid,
+                            label = { Text("https://…/dns-query") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = customValid, onClick = {
+                    prefs.edit()
+                        .putString(DnsSettings.PROVIDER, selected)
+                        .putString(DnsSettings.CUSTOM_URL, custom)
+                        .apply()
+                    applyDns()
+                    showDnsDialog = false
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { showDnsDialog = false }) { Text("Cancel") } }
+        )
+    }
+
+    netTestResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = { netTestResult = null },
+            title = { Text("Proxy & DNS test", fontWeight = FontWeight.Bold) },
+            text = { Text(result) },
+            confirmButton = { TextButton(onClick = { netTestResult = null }) { Text("OK") } }
         )
     }
 
@@ -1261,3 +1490,46 @@ fun SettingsScreenPreview() {
 }
 
 private enum class SecurityFlow { NONE, SET_PIN, CHANGE_VERIFY, CHANGE_SET, REMOVE_PIN, CAPTURE_PUZZLE }
+
+private fun runNetworkTest(prefs: SharedPreferences): String {
+    val lines = mutableListOf<String>()
+    val host = "open.spotify.com"
+    if (DnsSettings.enabled(prefs)) {
+        val endpoint = DnsSettings.endpoint(prefs)
+        val t0 = System.nanoTime()
+        lines += try {
+            val addrs = DohResolver.lookup(endpoint, host)
+            "DNS ✓ $host → ${addrs.first().hostAddress} via $endpoint (${(System.nanoTime() - t0) / 1_000_000} ms)"
+        } catch (e: Exception) {
+            "DNS ✗ $endpoint: ${e.message}" + if (DnsSettings.fallback(prefs)) " (device DNS will be used)" else ""
+        }
+        lines += try {
+            DohResolver.lookup(endpoint, "doubleclick.net")
+            "Ad blocking: doubleclick.net was not blocked by this provider"
+        } catch (e: DnsBlockedException) {
+            "Ad blocking ✓ doubleclick.net is blocked"
+        } catch (e: Exception) {
+            "Ad blocking: doubleclick.net lookup failed (${e.message})"
+        }
+    } else {
+        lines += "DNS: secure DNS is off, using the device resolver"
+    }
+    if (!ProxySettings.enabled(prefs)) {
+        lines += "Proxy: off"
+    } else if (!LocalProxyManager.isRunning) {
+        lines += "Proxy ✗ not running — restart the app"
+    } else {
+        val t0 = System.nanoTime()
+        val ok = LocalProxyManager.testConnection(host)
+        lines += if (ok) "Proxy ✓ HTTPS to $host through 127.0.0.1:${LocalProxyManager.port} (${(System.nanoTime() - t0) / 1_000_000} ms)"
+        else "Proxy ✗ could not reach $host through 127.0.0.1:${LocalProxyManager.port}"
+    }
+    return lines.joinToString("\n\n")
+}
+
+private fun restartForProxyChange(context: android.content.Context) {
+    LocalProxyManager.stop()
+    val intent = android.content.Intent(context, CertificateActivity::class.java)
+        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    context.startActivity(intent)
+}

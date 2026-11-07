@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.respotfck.spotifck.proxy.LocalProxyManager
+import com.respotfck.spotifck.proxy.ProxySettings
 import com.respotfck.spotifck.ui.theme.SpotifyTheme
 import com.respotfck.spotifck.ui.theme.ThemePrefs
 import kotlinx.coroutines.Dispatchers
@@ -88,8 +89,15 @@ class CertificateActivity : ComponentActivity() {
             LaunchedEffect(disclosureAccepted) {
                 if (!disclosureAccepted) return@LaunchedEffect
                 withContext(Dispatchers.IO) {
+                    val netPrefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
+                    if (!ProxySettings.enabled(netPrefs)) {
+                        certInstalled = true
+                        checkDone = true
+                        checking = false
+                        return@withContext
+                    }
                     LocalProxyManager.init(this@CertificateActivity)
-                    LocalProxyManager.start()
+                    LocalProxyManager.start(ProxySettings.port(netPrefs))
                     certInstalled = LocalProxyManager.isCAInstalled()
                     checkDone = true
                     checking = false
@@ -164,7 +172,9 @@ class CertificateActivity : ComponentActivity() {
                                 scope.launch {
                                     withContext(Dispatchers.IO) {
                                         if (!LocalProxyManager.isRunning) {
-                                            LocalProxyManager.start()
+                                            LocalProxyManager.start(
+                                                ProxySettings.port(getSharedPreferences("spotilol_prefs", MODE_PRIVATE))
+                                            )
                                         }
                                         certInstalled = LocalProxyManager.isCAInstalled()
                                     }
@@ -208,7 +218,7 @@ private fun FirstRunDisclosure(onContinue: () -> Unit, onExit: () -> Unit) {
                 Text("This app loads third-party music services. They may receive your account, playback, and device data under their own terms and privacy policies.")
                 Text("Ad filtering and player controls modify web-player requests and behavior. They may stop working, may conflict with service terms, and do not grant rights to copy or redistribute music. Use services and content lawfully and respect copyright and DMCA requirements.")
                 Text("The app uses a proxy bound to this device to modify traffic from its WebView. Installing the app’s CA certificate lets the local proxy decrypt and change HTTPS traffic routed through it. Do not install it if you do not trust this app. You can remove it later under Android Settings > Security > Encryption & credentials > User credentials.")
-                Text("This proxy is not a VPN, encrypted DNS service, or anonymity tool. It does not hide your activity from Spotify or your network provider; DNS continues to use your device’s configured resolver. The app does not send proxy traffic through a remote privacy service.")
+                Text("This proxy is not a VPN, encrypted DNS service, or anonymity tool. It does not hide your activity from Spotify or your network provider; DNS lookups for proxied Spotify traffic use encrypted DNS-over-HTTPS (AdGuard by default), which you can change or turn off in Settings › Proxy & DNS. The app does not send proxy traffic through a remote privacy service.")
             }
         },
         confirmButton = {

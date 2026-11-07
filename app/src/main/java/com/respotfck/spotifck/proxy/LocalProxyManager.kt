@@ -207,14 +207,26 @@ object LocalProxyManager {
         Log.d(TAG, "CA certificate loaded")
     }
 
-    fun start() {
+    /** Upstream keep-alive pooling; toggled from Settings ("Reuse connections"). */
+    @Volatile var reuseConnections = true
+
+    /** Binds the proxy on [preferredPort] (0 = automatic); falls back to an automatic port if it's taken. */
+    fun start(preferredPort: Int = 0) {
         if (serverSocket != null) return
+        val loopback = java.net.InetAddress.getByName("127.0.0.1")
         // Bind synchronously so callers can use isRunning/port immediately without sleeping.
         val server = try {
-            ServerSocket(0, 128, java.net.InetAddress.getByName("127.0.0.1"))
+            ServerSocket(preferredPort, 128, loopback)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start proxy", e)
-            return
+            if (preferredPort == 0) {
+                Log.e(TAG, "Failed to start proxy", e)
+                return
+            }
+            Log.w(TAG, "Port $preferredPort unavailable (${e.message}), using an automatic port")
+            try { ServerSocket(0, 128, loopback) } catch (e2: Exception) {
+                Log.e(TAG, "Failed to start proxy", e2)
+                return
+            }
         }
         serverSocket = server
         Log.d(TAG, "Proxy started on port ${server.localPort}")
@@ -256,7 +268,7 @@ object LocalProxyManager {
 
     /** Parks a still-usable upstream socket for reuse, or closes it if it can't be reused. */
     private fun releaseUpstreamSocket(host: String, port: Int, sock: SSLSocket, reusable: Boolean) {
-        if (!reusable || sock.isClosed || !sock.isConnected) {
+        if (!reusable || !reuseConnections || sock.isClosed || !sock.isConnected) {
             try { sock.close() } catch (_: Exception) {}
             return
         }
@@ -299,9 +311,29 @@ object LocalProxyManager {
         }
     }
 
+    /** TCP-connects to [host] using the configured resolver (DNS-over-HTTPS or system), trying each address. */
+    private fun connectRaw(host: String, port: Int): Socket {
+        val addresses = DohResolver.resolve(host)
+        var last: Exception? = null
+        for (addr in addresses.sortedBy { if (it is java.net.Inet4Address) 0 else 1 }) {
+            val s = Socket()
+            try {
+                s.tcpNoDelay = true
+                s.connect(InetSocketAddress(addr, port), 10000)
+                return s
+            } catch (e: Exception) {
+                last = e
+                try { s.close() } catch (_: Exception) {}
+            }
+        }
+        throw last ?: java.net.UnknownHostException(host)
+    }
+
     /** Opens and fully verifies a brand-new upstream TLS connection. */
     private fun openUpstreamSocket(host: String, port: Int, useHttp2: Boolean): SSLSocket {
-        val socket = (SSLSocketFactory.getDefault().createSocket(host, port) as SSLSocket).also {
+        val raw = connectRaw(host, port)
+        val factory = SSLSocketFactory.getDefault() as SSLSocketFactory
+        val socket = (factory.createSocket(raw, host, port, true) as SSLSocket).also {
             if (Build.VERSION.SDK_INT >= 29) {
                 val params = it.sslParameters
                 params.applicationProtocols = if (useHttp2) arrayOf("h2") else arrayOf("http/1.1")
@@ -762,6 +794,36 @@ object LocalProxyManager {
         t2.start()
         t1.join()
         t2.join()
+    }
+
+    /** Opens an HTTPS connection to [host] through the running proxy and verifies the TLS handshake. */
+    fun testConnection(host: String = "open.spotify.com"): Boolean {
+        if (!isRunning) return false
+        return try {
+            Socket().use { sock ->
+                sock.connect(InetSocketAddress("127.0.0.1", port), 5000)
+                sock.soTimeout = 10000
+                sock.outputStream.write("CONNECT $host:443 HTTP/1.1\r\nHost: $host\r\n\r\n".toByteArray())
+                sock.outputStream.flush()
+                val reader = sock.inputStream.bufferedReader()
+                val status = reader.readLine() ?: return false
+                if (!status.contains("200")) return false
+                while (reader.readLine()?.isNotEmpty() == true) { }
+                val ssl = SSLContext.getDefault().socketFactory.createSocket(sock, host, 443, true) as SSLSocket
+                ssl.useClientMode = true
+                ssl.startHandshake()
+                val w = ssl.outputStream
+                w.write("HEAD / HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n".toByteArray())
+                w.flush()
+                val resp = ssl.inputStream.bufferedReader().readLine() ?: ""
+                ssl.close()
+                Log.d(TAG, "Proxy test to $host: $resp")
+                resp.startsWith("HTTP/1.1") && !resp.contains(" 502 ")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Proxy test to $host failed: ${e.message}")
+            false
+        }
     }
 
     fun isCAInstalled(): Boolean {

@@ -81,6 +81,7 @@ import androidx.webkit.WebSettingsCompat
 import com.respotfck.spotifck.R
 import com.respotfck.spotifck.bridge.SpotifyBridge
 import com.respotfck.spotifck.proxy.LocalProxyManager
+import com.respotfck.spotifck.proxy.ProxySettings
 import com.respotfck.spotifck.service.MediaNotificationService
 import com.respotfck.spotifck.ui.theme.SpotifyTheme
 import com.respotfck.spotifck.ui.theme.ThemePreset
@@ -136,7 +137,8 @@ class MainActivity : ComponentActivity() {
 
         // After an OOM kill, Android can resume directly at MainActivity
         // skipping CertificateActivity. Redirect there so the proxy starts.
-        if (!LocalProxyManager.isRunning) {
+        val proxyWanted = ProxySettings.enabled(getSharedPreferences("spotilol_prefs", MODE_PRIVATE))
+        if (proxyWanted && !LocalProxyManager.isRunning) {
             startActivity(Intent(this, CertificateActivity::class.java))
             finish()
             return
@@ -303,7 +305,11 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
 
-                                        if (LocalProxyManager.isRunning) {
+                                        if (!proxyWanted) {
+                                            ProxyController.getInstance().clearProxyOverride(
+                                                Executors.newSingleThreadExecutor()
+                                            ) { }
+                                        } else if (LocalProxyManager.isRunning) {
                                             val executor = Executors.newSingleThreadExecutor()
                                             val proxyConfig = ProxyConfig.Builder()
                                                 .addProxyRule("localhost:${LocalProxyManager.port}")

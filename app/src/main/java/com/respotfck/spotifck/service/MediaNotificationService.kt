@@ -283,6 +283,7 @@ class MediaNotificationService : Service() {
 
             if (coverUrl.isNotEmpty() && coverUrl != "null" && coverUrl != lastCoverUrl) {
                 lastCoverUrl = coverUrl
+                coverBitmap = null
                 loadCoverArt(coverUrl)
             } else if (coverUrl.isEmpty() || coverUrl == "null") {
                 lastCoverUrl = ""
@@ -350,6 +351,8 @@ class MediaNotificationService : Service() {
                     val h = (raw.height * scale).toInt()
                     val scaled = Bitmap.createScaledBitmap(raw, w, h, true)
                     if (scaled != raw) raw.recycle()
+                    // A newer track may have started while this image was downloading.
+                    if (url != lastCoverUrl) return@Thread
                     coverBitmap = scaled
                     updateMetadata()
                     showNotification()
