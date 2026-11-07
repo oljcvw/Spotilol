@@ -83,6 +83,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -222,6 +223,8 @@ fun SettingsScreen(
     var showDnsDialog by remember { mutableStateOf(false) }
     var netTestResult by remember { mutableStateOf<String?>(null) }
     var netTesting by remember { mutableStateOf(false) }
+    var pendingNetChange by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+    fun confirmNet(message: String, action: () -> Unit) { pendingNetChange = message to action }
     val netScope = rememberCoroutineScope()
     fun applyDns() {
         DohResolver.configure(prefs)
@@ -519,10 +522,15 @@ fun SettingsScreen(
                     } else "Off · Spotify may refuse the web player and DNS settings won't apply",
                     icon = Icons.Default.SettingsEthernet,
                     checked = proxyEnabled,
-                    onCheckedChange = {
-                        proxyEnabled = it
-                        prefs.edit().putBoolean(ProxySettings.ENABLED, it).apply()
-                        proxyRestartNeeded = true
+                    onCheckedChange = { v ->
+                        confirmNet(
+                            if (v) "Turn the local proxy back on? ReSpotifuck needs to restart to apply it."
+                            else "Turning off the local proxy disables ad filtering and secure DNS, and Spotify may refuse to load the web player or play music. ReSpotifuck needs to restart to apply it."
+                        ) {
+                            proxyEnabled = v
+                            prefs.edit().putBoolean(ProxySettings.ENABLED, v).apply()
+                            proxyRestartNeeded = true
+                        }
                     }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
@@ -530,7 +538,11 @@ fun SettingsScreen(
                     title = "Proxy port",
                     subtitle = if (proxyPort == 0) "Automatic (recommended)" else "Fixed: $proxyPort",
                     icon = Icons.Default.Router,
-                    onClick = { showPortDialog = true }
+                    onClick = {
+                        confirmNet("A fixed proxy port can clash with other apps on your phone. If the port is taken, an automatic one is used instead. Changing it needs a restart.") {
+                            showPortDialog = true
+                        }
+                    }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
                 SettingSwitchTile(
@@ -538,10 +550,15 @@ fun SettingsScreen(
                     subtitle = "Keep Spotify connections open between requests (faster)",
                     icon = Icons.Default.Speed,
                     checked = proxyReuse,
-                    onCheckedChange = {
-                        proxyReuse = it
-                        prefs.edit().putBoolean(ProxySettings.REUSE, it).apply()
-                        LocalProxyManager.reuseConnections = it
+                    onCheckedChange = { v ->
+                        confirmNet(
+                            if (v) "Reuse Spotify connections again? This is the faster default."
+                            else "Turning this off opens a new connection for every request, which makes loading and skipping tracks slower."
+                        ) {
+                            proxyReuse = v
+                            prefs.edit().putBoolean(ProxySettings.REUSE, v).apply()
+                            LocalProxyManager.reuseConnections = v
+                        }
                     }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
@@ -550,10 +567,15 @@ fun SettingsScreen(
                     subtitle = dnsSummary,
                     icon = Icons.Default.Dns,
                     checked = dnsEnabled,
-                    onCheckedChange = {
-                        dnsEnabled = it
-                        prefs.edit().putBoolean(DnsSettings.ENABLED, it).apply()
-                        applyDns()
+                    onCheckedChange = { v ->
+                        confirmNet(
+                            if (v) "Turn secure DNS back on? Lookups for Spotify traffic will go to your chosen DNS provider."
+                            else "Turning off secure DNS sends lookups to your phone's normal DNS. AdGuard will stop blocking trackers, and your network provider can see which servers the app looks up."
+                        ) {
+                            dnsEnabled = v
+                            prefs.edit().putBoolean(DnsSettings.ENABLED, v).apply()
+                            applyDns()
+                        }
                     }
                 )
                 if (dnsEnabled) {
@@ -562,7 +584,11 @@ fun SettingsScreen(
                         title = "DNS provider",
                         subtitle = DnsSettings.endpoint(prefs),
                         icon = Icons.Default.Public,
-                        onClick = { showDnsDialog = true }
+                        onClick = {
+                            confirmNet("Your DNS provider sees every server ReSpotifuck connects to. A wrong or untrusted custom provider can block Spotify or log your activity. Only use providers you trust.") {
+                                showDnsDialog = true
+                            }
+                        }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
                     SettingSwitchTile(
@@ -570,10 +596,15 @@ fun SettingsScreen(
                         subtitle = "If the DNS provider can't be reached",
                         icon = Icons.Default.SettingsBackupRestore,
                         checked = dnsFallback,
-                        onCheckedChange = {
-                            dnsFallback = it
-                            prefs.edit().putBoolean(DnsSettings.FALLBACK, it).apply()
-                            applyDns()
+                        onCheckedChange = { v ->
+                            confirmNet(
+                                if (v) "Allow falling back to your phone's normal DNS when the provider can't be reached?"
+                                else "Without fallback, Spotify won't load at all whenever your DNS provider is unreachable."
+                            ) {
+                                dnsFallback = v
+                                prefs.edit().putBoolean(DnsSettings.FALLBACK, v).apply()
+                                applyDns()
+                            }
                         }
                     )
                 }
@@ -597,7 +628,11 @@ fun SettingsScreen(
                         title = "Restart to apply proxy changes",
                         subtitle = "Restarts ReSpotifuck with the new proxy settings",
                         icon = Icons.Default.RestartAlt,
-                        onClick = { restartForProxyChange(context) }
+                        onClick = {
+                            confirmNet("ReSpotifuck will close and restart with the new proxy settings. Playback will stop.") {
+                                restartForProxyChange(context)
+                            }
+                        }
                     )
                 }
             }
@@ -944,6 +979,31 @@ fun SettingsScreen(
                 }) { Text("Save") }
             },
             dismissButton = { TextButton(onClick = { showDnsDialog = false }) { Text("Cancel") } }
+        )
+    }
+
+    pendingNetChange?.let { (message, action) ->
+        AlertDialog(
+            onDismissRequest = { pendingNetChange = null },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Change network settings?", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(message)
+                    Text(
+                        "Wrong proxy or DNS settings can stop Spotify from loading or playing. You can switch it back here at any time.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingNetChange = null
+                    action()
+                }) { Text("Continue", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { pendingNetChange = null }) { Text("Cancel") } }
         )
     }
 
