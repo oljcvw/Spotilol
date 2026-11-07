@@ -55,6 +55,11 @@ android {
     // Keep development APKs on the standard debug certificate. Use the
     // private release certificate only for distributable release builds.
     buildTypes {
+        // Separate package so a debug/test build installs next to the release app.
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("sharedKey")

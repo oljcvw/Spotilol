@@ -7,6 +7,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.respotfck.spotifck.security.AppLock
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -56,16 +57,16 @@ private val MonochromeText = Color(0xFFFFFFFF)
 
 // Long enough for the intro animation to land; runs in parallel with proxy start-up.
 private const val MIN_SPLASH_MS = 1000L
+private const val PIN_NONE = 0
+private const val PIN_PROMPT = 1
+private const val PIN_SETUP = 2
 
 class CertificateActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        )
+        AppLock.applyScreenCapturePolicy(window)
 
         setContent {
             val disclosurePrefs = getSharedPreferences("spotifck_disclosure", MODE_PRIVATE)
@@ -77,6 +78,9 @@ class CertificateActivity : ComponentActivity() {
             var checking by remember { mutableStateOf(true) }
             val scope = rememberCoroutineScope()
             var introDone by remember { mutableStateOf(false) }
+            var pinStage by remember {
+                mutableStateOf(if (AppLock.shouldPromptForPin()) PIN_PROMPT else PIN_NONE)
+            }
             LaunchedEffect(Unit) {
                 delay(MIN_SPLASH_MS)
                 introDone = true
@@ -93,8 +97,8 @@ class CertificateActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(certInstalled, checkDone, introDone) {
-                if (checkDone && certInstalled && introDone) {
+            LaunchedEffect(certInstalled, checkDone, introDone, pinStage) {
+                if (checkDone && certInstalled && introDone && pinStage == PIN_NONE) {
                     val fade = ActivityOptions.makeCustomAnimation(
                         this@CertificateActivity, android.R.anim.fade_in, android.R.anim.fade_out
                     )
@@ -114,6 +118,29 @@ class CertificateActivity : ComponentActivity() {
                             disclosureAccepted = true
                         },
                         onExit = { finish() }
+                    )
+                } else if (pinStage == PIN_PROMPT) {
+                    LaunchSplash(status = null)
+                    PinPromptDialog(
+                        onSetPin = { pinStage = PIN_SETUP },
+                        onSkip = {
+                            AppLock.setPromptState(AppLock.PROMPT_SKIPPED)
+                            AppLock.promptHandledThisLaunch = true
+                            pinStage = PIN_NONE
+                        },
+                        onNo = {
+                            AppLock.setPromptState(AppLock.PROMPT_DECLINED)
+                            AppLock.promptHandledThisLaunch = true
+                            pinStage = PIN_NONE
+                        }
+                    )
+                } else if (pinStage == PIN_SETUP) {
+                    PinSetupFlow(
+                        onDone = {
+                            AppLock.promptHandledThisLaunch = true
+                            pinStage = PIN_NONE
+                        },
+                        onCancel = { pinStage = PIN_PROMPT }
                     )
                 } else when {
                     checking || certInstalled -> {
@@ -155,6 +182,7 @@ class CertificateActivity : ComponentActivity() {
                         )
                     }
                 }
+                AppLockOverlay()
             }
         }
     }

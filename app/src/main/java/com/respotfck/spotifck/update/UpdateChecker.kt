@@ -66,7 +66,7 @@ class UpdateChecker(private val context: Context) {
             val releaseInfo = runCatching { fetchLatestRelease() }.getOrNull()
             val available = releaseInfo?.let { info ->
                 val currentVersion = runCatching {
-                    context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+                    context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty().substringBefore('-')
                 }.getOrDefault("")
                 isNewer(info.version, currentVersion)
             }

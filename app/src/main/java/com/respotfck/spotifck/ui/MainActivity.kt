@@ -17,6 +17,7 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import com.respotfck.spotifck.security.AppLock
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -128,10 +129,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        )
+        AppLock.applyScreenCapturePolicy(window)
 
         // After an OOM kill, Android can resume directly at MainActivity
         // skipping CertificateActivity. Redirect there so the proxy starts.
@@ -385,6 +383,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                AppLockOverlay()
             }
         }
     }
@@ -642,6 +641,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        AppLock.applyScreenCapturePolicy(window)
         val prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
         serviceEnabledState.value = prefs.getBoolean("ServiceOn", true)
         materialYouState.value = prefs.getBoolean("MaterialYou", false)

@@ -11,6 +11,7 @@ import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.respotfck.spotifck.security.AppLock
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,6 +44,10 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Screenshot
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Palette
@@ -105,10 +110,7 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        )
+        AppLock.applyScreenCapturePolicy(window)
         prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
 
         setContent {
@@ -125,6 +127,7 @@ class SettingsActivity : ComponentActivity() {
                     onClearCache = { clearWebViewCache() },
                     onClearData = { clearAllData() }
                 )
+                AppLockOverlay()
             }
         }
     }
@@ -185,6 +188,16 @@ fun SettingsScreen(
     var showAutoPlayDialog by remember { mutableStateOf(false) }
     var showGuiModeDialog by remember { mutableStateOf(false) }
     var showCustomCssDialog by remember { mutableStateOf(false) }
+    var pinEnabled by remember { mutableStateOf(AppLock.isPinSet()) }
+    var lockTimeout by remember { mutableStateOf(AppLock.lockTimeoutMs()) }
+    var captureAllowed by remember { mutableStateOf(AppLock.isScreenCaptureAllowed()) }
+    var securityFlow by remember { mutableStateOf(SecurityFlow.NONE) }
+    val activity = LocalContext.current as? android.app.Activity
+    fun setCapture(allowed: Boolean) {
+        AppLock.setScreenCaptureAllowed(allowed)
+        captureAllowed = allowed
+        activity?.window?.let(AppLock::applyScreenCapturePolicy)
+    }
 
     Scaffold(
         topBar = {
@@ -358,6 +371,53 @@ fun SettingsScreen(
                         amoledTheme = enabled
                         onAmoledThemeChange(enabled)
                         prefs.edit().putBoolean("AmoledTheme", enabled).apply()
+                    }
+                )
+            }
+
+            SettingSectionCard(
+                title = "PRIVACY & LOCK",
+                icon = Icons.Default.Lock
+            ) {
+                SettingSwitchTile(
+                    title = "App PIN lock",
+                    subtitle = if (pinEnabled) "PIN required to open ReSpotifuck" else "Off",
+                    icon = Icons.Default.Lock,
+                    checked = pinEnabled,
+                    onCheckedChange = { enable ->
+                        securityFlow = if (enable) SecurityFlow.SET_PIN else SecurityFlow.REMOVE_PIN
+                    }
+                )
+                if (pinEnabled) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                    SettingTile(
+                        title = "Change PIN",
+                        subtitle = "Requires your current PIN",
+                        icon = Icons.Default.Password,
+                        onClick = { securityFlow = SecurityFlow.CHANGE_VERIFY }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                    SettingTile(
+                        title = "Lock after leaving the app",
+                        subtitle = AppLock.timeoutOptions.firstOrNull { it.first == lockTimeout }?.second
+                            ?: "Immediately",
+                        icon = Icons.Default.Timer,
+                        onClick = {
+                            val options = AppLock.timeoutOptions
+                            val next = options[(options.indexOfFirst { it.first == lockTimeout } + 1) % options.size].first
+                            AppLock.setLockTimeoutMs(next)
+                            lockTimeout = next
+                        }
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                SettingSwitchTile(
+                    title = "Allow screen capture",
+                    subtitle = if (captureAllowed) "Screenshots and recording allowed" else "Blocked (recommended)",
+                    icon = Icons.Default.Screenshot,
+                    checked = captureAllowed,
+                    onCheckedChange = { allow ->
+                        if (allow) securityFlow = SecurityFlow.CAPTURE_PUZZLE else setCapture(false)
                     }
                 )
             }
@@ -563,6 +623,33 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(8.dp))
         }
+    }
+
+    when (securityFlow) {
+        SecurityFlow.NONE -> Unit
+        SecurityFlow.SET_PIN, SecurityFlow.CHANGE_SET -> PinSetupFlow(
+            onDone = { pinEnabled = true; securityFlow = SecurityFlow.NONE },
+            onCancel = { securityFlow = SecurityFlow.NONE }
+        )
+        SecurityFlow.CHANGE_VERIFY -> PinVerifyFlow(
+            title = "Change PIN",
+            onVerified = { securityFlow = SecurityFlow.CHANGE_SET },
+            onCancel = { securityFlow = SecurityFlow.NONE }
+        )
+        SecurityFlow.REMOVE_PIN -> PinVerifyFlow(
+            title = "Turn off PIN lock",
+            onVerified = {
+                AppLock.removePin()
+                AppLock.setPromptState(AppLock.PROMPT_DECLINED)
+                pinEnabled = false
+                securityFlow = SecurityFlow.NONE
+            },
+            onCancel = { securityFlow = SecurityFlow.NONE }
+        )
+        SecurityFlow.CAPTURE_PUZZLE -> CapturePuzzle(
+            onSolved = { setCapture(true); securityFlow = SecurityFlow.NONE },
+            onCancel = { securityFlow = SecurityFlow.NONE }
+        )
     }
 
     if (showPrivacyNotice) {
@@ -1050,3 +1137,5 @@ fun SettingsScreenPreview() {
         )
     }
 }
+
+private enum class SecurityFlow { NONE, SET_PIN, CHANGE_VERIFY, CHANGE_SET, REMOVE_PIN, CAPTURE_PUZZLE }
