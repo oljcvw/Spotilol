@@ -9,6 +9,11 @@ import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.widget.Toast
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.alpha
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.respotfck.spotifck.security.AppLock
@@ -202,6 +207,38 @@ fun SettingsScreen(
     onClearCache: () -> Unit,
     onClearData: () -> Unit
 ) {
+    var settingsLocked by remember { mutableStateOf(prefs.getBoolean(SETTINGS_LOCKED, false)) }
+    var showSettingsUnlock by remember { mutableStateOf(false) }
+    fun setSettingsLocked(locked: Boolean) {
+        settingsLocked = locked
+        prefs.edit().putBoolean(SETTINGS_LOCKED, locked).apply()
+    }
+    if (showSettingsUnlock) {
+        Dialog(
+            onDismissRequest = { showSettingsUnlock = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            PinEntryScreen(
+                title = "Unlock settings",
+                subtitle = "Enter your app PIN to turn off the settings lock",
+                onSubmit = { pin ->
+                    when (val r = AppLock.verify(pin)) {
+                        AppLock.Result.Ok -> {
+                            withContext(Dispatchers.Main) {
+                                setSettingsLocked(false)
+                                showSettingsUnlock = false
+                            }
+                            null
+                        }
+                        is AppLock.Result.Wrong -> "Wrong PIN · ${r.attemptsLeft} attempts left"
+                        is AppLock.Result.LockedOut -> "Too many attempts. Try again in ${(r.remainingMs + 999) / 1000} s"
+                    }
+                },
+                secondaryLabel = "Cancel",
+                onSecondary = { showSettingsUnlock = false }
+            )
+        }
+    }
     var autoplayMode by remember { mutableStateOf(prefs.getString("APlayMode", "disabled") ?: "disabled") }
     var takeControl by remember { mutableStateOf(prefs.getBoolean("TakeControl", true)) }
     var andAuto by remember { mutableStateOf(prefs.getBoolean("AndAuto", true)) }
@@ -288,6 +325,30 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            SettingSectionCard(
+                title = "SETTINGS LOCK",
+                icon = if (settingsLocked) Icons.Default.Lock else Icons.Default.LockOpen
+            ) {
+                SettingSwitchTile(
+                    title = "Lock settings",
+                    subtitle = if (settingsLocked) {
+                        "On · settings can't be changed" + (if (AppLock.isPinSet()) " (PIN needed to unlock)" else "")
+                    } else "Off · turn on to stop settings being changed",
+                    icon = if (settingsLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                    checked = settingsLocked,
+                    onCheckedChange = { on ->
+                        if (on) setSettingsLocked(true)
+                        else if (AppLock.isPinSet()) showSettingsUnlock = true
+                        else setSettingsLocked(false)
+                    }
+                )
+            }
+
+            Box {
+                Column(
+                    modifier = Modifier.alpha(if (settingsLocked) 0.4f else 1f),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
             SettingSectionCard(
                 title = "PLAYER",
                 icon = Icons.Default.PlayCircle
@@ -854,6 +915,25 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(8.dp))
+                        }
+                if (settingsLocked) {
+                    val lockedContext = LocalContext.current
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                Toast.makeText(
+                                    lockedContext,
+                                    "Settings are locked. Turn off Lock settings to change them.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                    )
+                }
+            }
         }
     }
 
@@ -1690,3 +1770,5 @@ private fun CompareDialog(onOpen: (String) -> Unit, onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
     )
 }
+
+private const val SETTINGS_LOCKED = "SettingsLocked"
