@@ -88,7 +88,7 @@ class MediaNotificationService : Service() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
                 val prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
-                if (prefs.getBoolean("BtAutoPause", false)) pausePlayback()
+                if (prefs.getBoolean("BtAutoPause", true)) pausePlayback()
             }
         }
     }
@@ -98,7 +98,7 @@ class MediaNotificationService : Service() {
             val prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
             when (intent.action) {
                 BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                    if (prefs.getBoolean("BtAutoPause", false)) pausePlayback()
+                    if (prefs.getBoolean("BtAutoPause", true)) pausePlayback()
                 }
                 BluetoothDevice.ACTION_ACL_CONNECTED -> {
                     if (prefs.getBoolean("BtAutoResume", false)) resumePlayback()

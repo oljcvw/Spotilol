@@ -128,6 +128,9 @@ object LocalProxyManager {
     private const val GCM_TAG_BITS = 128
 
     fun init(context: Context) {
+        if (silentMp3 == null) {
+            silentMp3 = runCatching { context.assets.open("silent.mp3").use { it.readBytes() } }.getOrNull()
+        }
         val ksFile = File(context.filesDir, KEYSTORE_FILE)
         val password = getOrCreateKeystorePassword(context)
 
@@ -478,6 +481,26 @@ object LocalProxyManager {
                     }
 
                     val statusCode = extractStatusCode(respHead)
+                    val silence = silentMp3
+                    if (silence != null && (statusCode == 200 || statusCode == 206) &&
+                        isAudioAd(host, reqHead.statusLine, getHeaderValue(respHead, "Content-Type"))
+                    ) {
+                        val drained = pipeBody(upstreamIn, DiscardStream, respHead, isResponse = true)
+                        audioAdsReplaced++
+                        Log.i(TAG, "Replaced MP3 audio ad from $host with silence")
+                        val sb = StringBuilder("HTTP/1.1 200 OK\r\nContent-Type: audio/mpeg\r\nContent-Length: ${silence.size}\r\n")
+                        for (h in CORS_HEADERS) getHeaderValue(respHead, h)?.let { sb.append(h).append(": ").append(it).append("\r\n") }
+                        if (drained) sb.append("Connection: close\r\n")
+                        sb.append("\r\n")
+                        clientOut.write(sb.toString().toByteArray(Charsets.ISO_8859_1))
+                        clientOut.write(silence)
+                        clientOut.flush()
+                        if (drained) {
+                            reuseUpstream = false
+                            break
+                        }
+                        continue
+                    }
                     writeHead(respHead, clientOut)
 
                     val upstreamExhausted = pipeBody(upstreamIn, clientOut, respHead, isResponse = true)
@@ -518,6 +541,36 @@ object LocalProxyManager {
     }
 
     private const val STREAM_BUFFER_BYTES = 16 * 1024
+
+    @Volatile private var silentMp3: ByteArray? = null
+    @Volatile var audioAdsReplaced = 0
+        private set
+
+    private val CORS_HEADERS = listOf(
+        "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials",
+        "Access-Control-Expose-Headers", "Timing-Allow-Origin"
+    )
+    private val AUDIO_AD_HOSTS = listOf("amillionads.com", "2mdn.net", "adxcel.com", "adstudio-assets.scdn.co")
+
+    private object DiscardStream : OutputStream() {
+        override fun write(b: Int) {}
+        override fun write(b: ByteArray, off: Int, len: Int) {}
+    }
+
+    /**
+     * Spotify serves music as encrypted MP4 but audio ads as plain MP3 from the same CDNs,
+     * so (like the original Spotifuck) any audio/mpeg from those paths is treated as an ad.
+     */
+    private fun isAudioAd(host: String, requestLine: String, contentType: String?): Boolean {
+        if (contentType == null || !contentType.trim().lowercase().startsWith("audio/mpeg")) return false
+        val h = host.lowercase()
+        if ("podz-content" in h || "gew4-spclient" in h) return false
+        val target = requestLine.split(' ').getOrNull(1) ?: return false
+        val path = if (target.startsWith("http")) runCatching { java.net.URI(target).rawPath }.getOrNull() ?: return false else target
+        if ((h.endsWith("akamaized.net") || h.endsWith("scdn.co") || h.endsWith("spotifycdn.com")) && path.startsWith("/audio/")) return true
+        if (h.endsWith("scdn.co") && path.startsWith("/mp3-ad/")) return true
+        return AUDIO_AD_HOSTS.any { h == it || h.endsWith(".$it") }
+    }
 
     /** Tell the client why the tunnel failed instead of closing it with an empty reply. */
     private fun writeBadGateway(out: java.io.OutputStream, host: String) {

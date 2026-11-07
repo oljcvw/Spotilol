@@ -33,7 +33,7 @@ object TweakPrefs {
     fun hideUpsells(p: SharedPreferences) = p.getBoolean(HIDE_UPSELLS, true)
     fun hidePodcasts(p: SharedPreferences) = p.getBoolean(HIDE_PODCASTS, false)
     fun hideSponsored(p: SharedPreferences) = p.getBoolean(HIDE_SPONSORED, true)
-    fun hideCanvas(p: SharedPreferences) = p.getBoolean(HIDE_CANVAS, false)
+    fun hideCanvas(p: SharedPreferences) = p.getBoolean(HIDE_CANVAS, true)
     fun lyricsFallback(p: SharedPreferences) = p.getBoolean(LYRICS_FALLBACK, true)
     fun rememberModes(p: SharedPreferences) = p.getBoolean(REMEMBER_MODES, true)
     fun noSmartShuffle(p: SharedPreferences) = p.getBoolean(NO_SMART_SHUFFLE, false)

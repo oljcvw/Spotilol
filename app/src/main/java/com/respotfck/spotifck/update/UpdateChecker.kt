@@ -86,26 +86,26 @@ class UpdateChecker(private val context: Context) {
         }.start()
     }
 
+    /** Checks both GitHub Releases and the release-assets folder on main, and returns the newer one. */
     private fun fetchLatestRelease(): ReleaseInfo? {
         val releaseJson = requestBody(API_URL)?.let { runCatching { JSONObject(it) }.getOrNull() }
         val releaseVersion = releaseJson?.optString("tag_name")
             ?.removePrefix("v")
             ?.takeIf { it.matches(Regex("[0-9]+(?:\\.[0-9]+)*")) }
 
-        if (releaseJson != null && releaseVersion != null) {
+        val fromReleases = if (releaseJson != null && releaseVersion != null) {
             val releaseUrl = releaseJson.optString("html_url").takeIf(String::isNotBlank) ?: RELEASES_PAGE_URL
-            val releaseApkUrl = findReleaseApk(releaseJson.optJSONArray("assets"), releaseVersion)
-            val apkUrl = releaseApkUrl ?: findDirectoryApk(releaseVersion)
-            return ReleaseInfo(releaseVersion, releaseUrl, apkUrl)
-        }
-
-        // GitHub Releases may not be published yet. Fall back to signed APKs
-        // checked into the repository's release-assets directory.
-        val directoryRelease = findLatestDirectoryRelease()
-        return directoryRelease ?: if (releaseJson != null) {
-            val tag = releaseJson.optString("tag_name").removePrefix("v")
-            if (tag.isNotBlank()) ReleaseInfo(tag, RELEASES_PAGE_URL, null) else null
+            val apkUrl = findReleaseApk(releaseJson.optJSONArray("assets"), releaseVersion) ?: findDirectoryApk(releaseVersion)
+            ReleaseInfo(releaseVersion, releaseUrl, apkUrl)
         } else null
+        val fromDirectory = findLatestDirectoryRelease()
+
+        return when {
+            fromReleases == null -> fromDirectory
+            fromDirectory == null -> fromReleases
+            compareVersions(fromDirectory.version, fromReleases.version) > 0 -> fromDirectory
+            else -> fromReleases
+        }
     }
 
     private fun findReleaseApk(assets: JSONArray?, version: String): String? {

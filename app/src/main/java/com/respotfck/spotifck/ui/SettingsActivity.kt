@@ -229,6 +229,23 @@ fun SettingsScreen(
     onClearData: () -> Unit
 ) {
     val appCtx = LocalContext.current
+    var pendingSensitive by remember { mutableStateOf<Triple<String, String, () -> Unit>?>(null) }
+    fun confirmSensitive(title: String, message: String, action: () -> Unit) { pendingSensitive = Triple(title, message, action) }
+    pendingSensitive?.let { (title, message, action) ->
+        AlertDialog(
+            onDismissRequest = { pendingSensitive = null },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text(title, fontWeight = FontWeight.Bold) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingSensitive = null
+                    action()
+                }) { Text("Continue", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { pendingSensitive = null }) { Text("Cancel") } }
+        )
+    }
     var showIconDialog by remember { mutableStateOf(false) }
     var showStartPageDialog by remember { mutableStateOf(false) }
     var showEngineDialog by remember { mutableStateOf(false) }
@@ -243,8 +260,16 @@ fun SettingsScreen(
                     WebEngine.engines.forEach { e ->
                         Row(
                             Modifier.fillMaxWidth().clickable {
-                                engineChoice = e.id
-                                WebEngine.choose(prefs, e.id)
+                                val apply = {
+                                    engineChoice = e.id
+                                    WebEngine.choose(prefs, e.id)
+                                }
+                                if (e.id == WebEngine.SYSTEM || e.id == engineChoice) apply()
+                                else confirmSensitive(
+                                    "Switch to ${e.label}?",
+                                    if (e.id == WebEngine.BROWSER) "Spotify will open in your browser. Ad filtering, the custom player, proxy and secure DNS won't be available."
+                                    else "Safe mode turns off the proxy, secure DNS and GPU acceleration. Use it only if the normal engine keeps failing."
+                                ) { apply() }
                             }.padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -261,9 +286,16 @@ fun SettingsScreen(
                             Text("Automatic fallback", fontWeight = FontWeight.SemiBold)
                             Text("Switch to the next engine if this one crashes or the player doesn't load", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Switch(checked = engineAuto, onCheckedChange = {
-                            engineAuto = it
-                            prefs.edit().putBoolean(WebEngine.AUTO, it).apply()
+                        Switch(checked = engineAuto, onCheckedChange = { on ->
+                            val apply = {
+                                engineAuto = on
+                                prefs.edit().putBoolean(WebEngine.AUTO, on).apply()
+                            }
+                            if (on) apply()
+                            else confirmSensitive(
+                                "Turn off automatic fallback?",
+                                "If the web engine crashes or the player won't load, ReSpotifuck will stay stuck instead of switching to a backup engine."
+                            ) { apply() }
                         })
                     }
                     Spacer(Modifier.height(10.dp))
@@ -381,7 +413,7 @@ fun SettingsScreen(
     var customCss by remember { mutableStateOf(prefs.getString("CustomCss", "") ?: "") }
     var amoledTheme by remember { mutableStateOf(amoledThemeState) }
     var swipeStop by remember { mutableStateOf(prefs.getBoolean("SwipeStop", true)) }
-    var btAutoPause by remember { mutableStateOf(prefs.getBoolean("BtAutoPause", false)) }
+    var btAutoPause by remember { mutableStateOf(prefs.getBoolean("BtAutoPause", true)) }
     var btAutoResume by remember { mutableStateOf(prefs.getBoolean("BtAutoResume", false)) }
 
     var proxyEnabled by remember { mutableStateOf(ProxySettings.enabled(prefs)) }
@@ -541,31 +573,32 @@ fun SettingsScreen(
             }
 
             SettingSectionCard(
-                title = "BLUETOOTH",
-                icon = Icons.Default.Smartphone
+                title = "TWEAKS",
+                icon = Icons.Default.Tune
             ) {
-                SettingSwitchTile(
-                    title = "Pause on Disconnect",
-                    subtitle = "Pause when BT/headphones disconnect",
-                    icon = Icons.Default.Smartphone,
-                    checked = btAutoPause,
-                    onCheckedChange = {
-                        btAutoPause = it
-                        prefs.edit().putBoolean("BtAutoPause", it).apply()
-                    }
-                )
-
+                PrefSwitchTile(prefs, TweakPrefs.HIDE_UPSELLS, true, "Hide Premium upsells", "Hide Upgrade / Explore Premium banners and the Create button", Icons.Default.VisibilityOff,
+                    offWarning = "Premium banners, upgrade prompts and the Create button will show again.", confirm = ::confirmSensitive)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-
-                SettingSwitchTile(
-                    title = "Resume on Connect",
-                    subtitle = "Resume when BT device connects",
-                    icon = Icons.Default.Smartphone,
-                    checked = btAutoResume,
-                    onCheckedChange = {
-                        btAutoResume = it
-                        prefs.edit().putBoolean("BtAutoResume", it).apply()
-                    }
+                PrefSwitchTile(prefs, TweakPrefs.HIDE_PODCASTS, false, "Hide podcasts & audiobooks", "Hide shows, episodes, audiobooks and video podcasts", Icons.Default.Podcasts)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.HIDE_SPONSORED, true, "Hide sponsored content", "Hide sponsored and promoted cards and playlists", Icons.Default.Block,
+                    offWarning = "Sponsored and promoted cards and playlists will show again in Home and Search.", confirm = ::confirmSensitive)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.HIDE_CANVAS, true, "Hide Canvas videos", "Stop the looping videos (saves data and battery)", Icons.Default.VideocamOff)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.LYRICS_FALLBACK, true, "Lyrics fallback (LRCLIB)", "Show lyrics from lrclib.net when Spotify has none", Icons.Default.Lyrics)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.REMEMBER_MODES, true, "Remember shuffle & repeat", "Restore your shuffle and repeat choice on launch", Icons.Default.Shuffle)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.NO_SMART_SHUFFLE, false, "Turn off Smart Shuffle", "Switch Smart Shuffle back to normal shuffle", Icons.Default.ShuffleOn)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.DATA_SAVER, false, "Data saver", "Smaller artwork and no Canvas videos", Icons.Default.DataSaverOn)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                SettingTile(
+                    title = "Start-up page",
+                    subtitle = startPage.label,
+                    icon = Icons.Default.Home,
+                    onClick = { showStartPageDialog = true }
                 )
             }
 
@@ -668,30 +701,31 @@ fun SettingsScreen(
             }
 
             SettingSectionCard(
-                title = "TWEAKS",
-                icon = Icons.Default.Tune
+                title = "BLUETOOTH",
+                icon = Icons.Default.Smartphone
             ) {
-                PrefSwitchTile(prefs, TweakPrefs.HIDE_UPSELLS, true, "Hide Premium upsells", "Hide Upgrade / Explore Premium banners and the Create button", Icons.Default.VisibilityOff)
+                SettingSwitchTile(
+                    title = "Pause on Disconnect",
+                    subtitle = "Pause when BT/headphones disconnect",
+                    icon = Icons.Default.Smartphone,
+                    checked = btAutoPause,
+                    onCheckedChange = {
+                        btAutoPause = it
+                        prefs.edit().putBoolean("BtAutoPause", it).apply()
+                    }
+                )
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-                PrefSwitchTile(prefs, TweakPrefs.HIDE_PODCASTS, false, "Hide podcasts & audiobooks", "Hide shows, episodes, audiobooks and video podcasts", Icons.Default.Podcasts)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-                PrefSwitchTile(prefs, TweakPrefs.HIDE_SPONSORED, true, "Hide sponsored content", "Hide sponsored and promoted cards and playlists", Icons.Default.Block)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-                PrefSwitchTile(prefs, TweakPrefs.HIDE_CANVAS, false, "Hide Canvas videos", "Stop the looping videos (saves data and battery)", Icons.Default.VideocamOff)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-                PrefSwitchTile(prefs, TweakPrefs.LYRICS_FALLBACK, true, "Lyrics fallback (LRCLIB)", "Show lyrics from lrclib.net when Spotify has none", Icons.Default.Lyrics)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-                PrefSwitchTile(prefs, TweakPrefs.REMEMBER_MODES, true, "Remember shuffle & repeat", "Restore your shuffle and repeat choice on launch", Icons.Default.Shuffle)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-                PrefSwitchTile(prefs, TweakPrefs.NO_SMART_SHUFFLE, false, "Turn off Smart Shuffle", "Switch Smart Shuffle back to normal shuffle", Icons.Default.ShuffleOn)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-                PrefSwitchTile(prefs, TweakPrefs.DATA_SAVER, false, "Data saver", "Smaller artwork and no Canvas videos", Icons.Default.DataSaverOn)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-                SettingTile(
-                    title = "Start-up page",
-                    subtitle = startPage.label,
-                    icon = Icons.Default.Home,
-                    onClick = { showStartPageDialog = true }
+
+                SettingSwitchTile(
+                    title = "Resume on Connect",
+                    subtitle = "Resume when BT device connects",
+                    icon = Icons.Default.Smartphone,
+                    checked = btAutoResume,
+                    onCheckedChange = {
+                        btAutoResume = it
+                        prefs.edit().putBoolean("BtAutoResume", it).apply()
+                    }
                 )
             }
 
@@ -705,7 +739,11 @@ fun SettingsScreen(
                     icon = Icons.Default.Lock,
                     checked = pinEnabled,
                     onCheckedChange = { enable ->
-                        securityFlow = if (enable) SecurityFlow.SET_PIN else SecurityFlow.REMOVE_PIN
+                        if (enable) securityFlow = SecurityFlow.SET_PIN
+                        else confirmSensitive(
+                            "Turn off the PIN lock?",
+                            "Anyone who picks up your phone will be able to open ReSpotifuck and change its settings."
+                        ) { securityFlow = SecurityFlow.REMOVE_PIN }
                     }
                 )
                 if (pinEnabled) {
@@ -737,7 +775,10 @@ fun SettingsScreen(
                     icon = Icons.Default.Screenshot,
                     checked = captureAllowed,
                     onCheckedChange = { allow ->
-                        if (allow) securityFlow = SecurityFlow.CAPTURE_PUZZLE else setCapture(false)
+                        if (allow) confirmSensitive(
+                            "Allow screen capture?",
+                            "Screenshots and screen recordings of ReSpotifuck, including your library and account pages, will be possible. You'll need to solve a puzzle next."
+                        ) { securityFlow = SecurityFlow.CAPTURE_PUZZLE } else setCapture(false)
                     }
                 )
             }
@@ -871,7 +912,7 @@ fun SettingsScreen(
             }
 
             SettingSectionCard(
-                title = "SECURITY & NETWORK",
+                title = "SECURITY & CERTIFICATE",
                 icon = Icons.Default.Shield
             ) {
                 val context = LocalContext.current
@@ -921,7 +962,12 @@ fun SettingsScreen(
                     title = "Restore settings",
                     subtitle = "Load settings from a backup file and restart",
                     icon = Icons.Default.Restore,
-                    onClick = { restoreLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
+                    onClick = {
+                        confirmSensitive(
+                            "Restore settings?",
+                            "Your current settings will be replaced by the ones in the backup and ReSpotifuck will restart."
+                        ) { restoreLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
+                    }
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
@@ -1893,15 +1939,21 @@ private class CompareApp(val name: String, val role: String, val url: String, va
 
 private val compareApps = listOf(
     CompareApp(
-        "Spotifuck", "The original project by deviato", "https://github.com/deviato/Spotifuck",
+        "Spotifuck", "The original app by deviato (Java, closed source)", "https://github.com/ReSpotF-ck/old-Spotifck_src-clone",
         listOf(
-            "Reverse-engineered Spotify's web player to filter audio ads",
-            "The ad-filtering approach the later forks are built on"
+            "Spotify web player in a background WebView service",
+            "Audio ad filtering: MP3 ads from Spotify's CDNs swapped for silence; analytics blocked",
+            "Media notification, home-screen widget and Android Auto controls",
+            "Opens spotify: and open.spotify.com links in the app",
+            "Autoplay, Take Control, auto-close Now Playing, AMOLED, GUI hack mode",
+            "Auto-shutdown and sleep timers, force portrait, force English",
+            "Headphone and Bluetooth auto play/stop"
         )
     ),
     CompareApp(
-        "Spotilol", "Android app built on Spotifuck's work", "https://github.com/oljcvw/Spotilol",
+        "Spotilol", "Open-source Kotlin rewrite of Spotifuck", "https://github.com/oljcvw/Spotilol",
         listOf(
+            "Dropped Spotifuck's home widget, link handler, MP3 ad muting and force-English option",
             "Spotify web player in an Android WebView, with audio ad filtering",
             "Media notification, lock screen, Bluetooth and Wear OS controls",
             "Autoplay modes, Take Control, Android Auto controls",
@@ -1914,6 +1966,10 @@ private val compareApps = listOf(
     CompareApp(
         "ReSpotifuck", "This app: everything in Spotilol, plus", "https://github.com/ReSpotF-ck/-ReSpotif-ck-App",
         listOf(
+            "MP3 ad muting from Spotifuck restored, now done inside the proxy",
+            "Tweaks: hide upsells, podcasts, sponsored items and Canvas; LRCLIB lyrics; data saver",
+            "Seasonal and meme app icons, preset app names, settings backup/restore",
+            "Web engine choice with automatic fallback, warnings before risky changes",
             "Faster proxy: no 32-connection limit, connection reuse, buffered I/O, no Nagle delay",
             "Faster start-up: no fixed delays, offline certificate check, WebView cache kept",
             "Secure DNS (DNS-over-HTTPS) via AdGuard, on by default, with editable Proxy & DNS settings",
@@ -1978,12 +2034,17 @@ private fun PrefSwitchTile(
     default: Boolean,
     title: String,
     subtitle: String,
-    icon: ImageVector
+    icon: ImageVector,
+    offWarning: String? = null,
+    confirm: ((String, String, () -> Unit) -> Unit)? = null
 ) {
     var on by remember { mutableStateOf(prefs.getBoolean(key, default)) }
-    SettingSwitchTile(title = title, subtitle = subtitle, icon = icon, checked = on) {
-        on = it
-        prefs.edit().putBoolean(key, it).apply()
+    SettingSwitchTile(title = title, subtitle = subtitle, icon = icon, checked = on) { v ->
+        val apply = {
+            on = v
+            prefs.edit().putBoolean(key, v).apply()
+        }
+        if (!v && offWarning != null && confirm != null) confirm("Turn off \"$title\"?", offWarning, apply) else apply()
     }
 }
 
