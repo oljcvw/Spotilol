@@ -1,5 +1,6 @@
 package com.respotfck.spotifck.service
 
+import com.respotfck.spotifck.AppIdentity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -323,7 +324,7 @@ class MediaNotificationService : Service() {
         val builder = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
-            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "ReSpotifuck")
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, AppIdentity.currentName)
             .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentDuration)
         coverBitmap?.let { bmp ->
             builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bmp)
@@ -394,9 +395,9 @@ class MediaNotificationService : Service() {
         ).build()
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(currentTitle.ifEmpty { "ReSpotifuck" })
+            .setContentTitle(currentTitle.ifEmpty { AppIdentity.currentName })
             .setContentText(currentArtist)
-            .setSubText("ReSpotifuck")
+            .setSubText(AppIdentity.currentName)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(contentIntent)
             .setOngoing(true)

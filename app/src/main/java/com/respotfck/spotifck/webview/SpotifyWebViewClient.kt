@@ -14,12 +14,15 @@ import java.io.ByteArrayInputStream
 import java.util.regex.Pattern
 
 class SpotifyWebViewClient(
-    private val onLoginRequired: () -> Unit
+    private val onLoginRequired: () -> Unit,
+    private val onPageOk: () -> Unit = {},
+    private val onRendererGone: () -> Unit = {}
 ) : WebViewClient() {
 
     override fun onPageFinished(view: WebView?, url: String?) {
         super.onPageFinished(view, url)
         if (view == null || url == null) return
+        if (url.startsWith("https://open.spotify.com") || url.startsWith("https://accounts.spotify.com")) onPageOk()
 
         if (url.startsWith("https://www.facebook.com/privacy/consent/gdp/")) {
             onPageFinishedClean(view, FB_GDPR_BYPASS)
@@ -62,6 +65,7 @@ class SpotifyWebViewClient(
             it.stopLoading()
             it.destroy()
         }
+        onRendererGone()
         return true
     }
 
@@ -70,6 +74,13 @@ class SpotifyWebViewClient(
         request: WebResourceRequest
     ): WebResourceResponse? {
         val url = request.url.toString()
+
+        if (request.url.host == "canvaz.scdn.co" &&
+            TweakPrefs.blocksCanvas(view.context.getSharedPreferences("spotilol_prefs", 0))
+        ) {
+            return WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(),
+                ByteArrayInputStream(ByteArray(0)))
+        }
 
         if (isAnalyticsDomain(url)) {
             val headers = mapOf("Access-Control-Allow-Origin" to "*")
@@ -110,7 +121,9 @@ class SpotifyWebViewClient(
         val cleanJs = stripConsoleLogs(js) + "\n" +
                 buildAmoledJs(amoledEnabled) + "\n" +
                 buildThemeJs(prefs) + "\n" +
-                buildCustomCssJs(customCss)
+                buildCustomCssJs(customCss) + "\n" +
+                TweakPrefs.flagsJs(prefs) + "\n" +
+                TweakPrefs.TWEAKS_JS
         view.evaluateJavascript(cleanJs, null)
     }
 
@@ -692,7 +705,7 @@ class SpotifyWebViewClient(
                 document.getElementById('spl-play').onclick=function(){var pb=document.querySelector('button[data-testid=control-button-playpause]');actPlayPause(pb&&pb.getAttribute('aria-label')==='Play')};
                 document.getElementById('spl-shuffle').onclick=function(){var sb=rsShuffleBtn();if(sb)sb.click()};
                 document.getElementById('spl-repeat').onclick=function(){actRepeat()};
-                document.getElementById('spl-lyrics').onclick=function(){if(this.classList.contains('spl-disabled'))return;if(typeof closeNowPlay==='function') closeNowPlay();var lb=document.querySelector('button[data-testid=lyrics-button]');if(lb&&!lb.disabled)lb.click()};
+                document.getElementById('spl-lyrics').onclick=function(){if(this.classList.contains('spl-disabled'))return;if(typeof closeNowPlay==='function') closeNowPlay();var lb=document.querySelector('button[data-testid=lyrics-button]');if(lb&&!lb.disabled&&lb.getAttribute('aria-disabled')!=='true')lb.click();else if(window.rsTw&&rsTw.lyrics&&window.rsLrc)rsLrc()};
                 document.getElementById('spl-queue').onclick=function(){var qb=document.querySelector('button[data-testid=control-button-queue]');if(qb)qb.click()};
                 document.getElementById('spl-vol').onclick=function(){var vb=document.querySelector('button[data-testid=volume-bar-toggle-mute-button]');if(vb)vb.click()};
                 document.getElementById('spl-nptoggle').onclick=function(){clickNP()};
@@ -778,9 +791,9 @@ class SpotifyWebViewClient(
                     var lb=document.querySelector('button[data-testid=lyrics-button]');
                     if(lb){
                         ly.style.display='';
-                        ly.classList.toggle('spl-disabled',lb.disabled||lb.getAttribute('aria-disabled')==='true');
+                        ly.classList.toggle('spl-disabled',(lb.disabled||lb.getAttribute('aria-disabled')==='true')&&!(window.rsTw&&rsTw.lyrics));
                     } else {
-                        ly.style.display='none';
+                        ly.style.display=(window.rsTw&&rsTw.lyrics)?'':'none';
                     }
                     if(tm) tm.classList.toggle('spl-active',typeof sleepTimerActive!=='undefined'&&sleepTimerActive&&sleepTimerActive.value);
 

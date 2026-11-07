@@ -52,7 +52,7 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 private val BrandRed = Color(0xFFD90218)
-private const val WORDMARK = "ReSpotifuck"
+private val WORDMARK: String get() = com.respotfck.spotifck.AppIdentity.currentName
 
 /**
  * Animated launch screen. On Android 12+ the system splash has already drawn the logo

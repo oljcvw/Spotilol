@@ -1,5 +1,16 @@
 package com.respotfck.spotifck.ui
 
+import androidx.compose.material.icons.Icons
+import android.widget.Toast
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
+import androidx.compose.material.icons.filled.Warning
+import com.respotfck.spotifck.proxy.DohResolver
+import com.respotfck.spotifck.proxy.DnsSettings
+import com.respotfck.spotifck.webview.WebEngine
+import com.respotfck.spotifck.AppIdentity
+import com.respotfck.spotifck.webview.TweakPrefs
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -96,6 +107,10 @@ import java.util.concurrent.Executors
 class MainActivity : ComponentActivity() {
 
     private var webView: WebView? = null
+    private val engineState = mutableStateOf(WebEngine.SYSTEM)
+    private var enginePageOk = false
+    private val networkWarning = mutableStateOf<NetWarning?>(null)
+    private val dismissedWarning = mutableStateOf<String?>(null)
     private var serviceStarted = false
 
     private val serviceEnabledState = mutableStateOf(true)
@@ -126,13 +141,17 @@ class MainActivity : ComponentActivity() {
         10 to "10 min",
         15 to "15 min",
         30 to "30 min",
-        60 to "60 min"
+        45 to "45 min",
+        60 to "60 min",
+        90 to "90 min",
+        -1 to "End of this song"
     )
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        engineState.value = WebEngine.active(getSharedPreferences("spotilol_prefs", MODE_PRIVATE))
         AppLock.applyScreenCapturePolicy(window)
 
         // After an OOM kill, Android can resume directly at MainActivity
@@ -176,7 +195,7 @@ class MainActivity : ComponentActivity() {
                         TopAppBar(
                             title = {
                                 Text(
-                                    "ReSpotifuck",
+                                    AppIdentity.currentName,
                                     fontWeight = FontWeight.Bold
                                 )
                             },
@@ -236,11 +255,15 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .padding(innerPadding)
                     ) {
-                        if (serviceEnabled) {
+                        if (serviceEnabled && engineState.value == WebEngine.BROWSER) {
+                            BrowserFallbackScreen()
+                        } else if (serviceEnabled) {
                             val bridge = remember {
                                 SpotifyBridge(WeakReference(this@MainActivity))
                             }
 
+                            bridge.evalJs = { js -> webView?.post { webView?.evaluateJavascript(js, null) } }
+                            bridge.onSleepTimerDone = { cancelSleepTimer() }
                             bridge.onTimerDialogRequest = {
                                 showSleepTimerDialog.value = true
                                 if (!timerActive) {
@@ -254,7 +277,11 @@ class MainActivity : ComponentActivity() {
 
                             AndroidView(
                                 factory = { context ->
-                                    WebView(context).apply {
+                                    val created = runCatching { WebView(context) }.getOrNull()
+                                    if (created == null) {
+                                        window.decorView.post { onEngineFailure("the web engine couldn't start") }
+                                        android.widget.FrameLayout(context)
+                                    } else created.apply {
                                         layoutParams = ViewGroup.LayoutParams(
                                             ViewGroup.LayoutParams.MATCH_PARENT,
                                             ViewGroup.LayoutParams.MATCH_PARENT
@@ -262,7 +289,9 @@ class MainActivity : ComponentActivity() {
 
                                         webView = this
 
-                                        setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                                        val safeMode = engineState.value == WebEngine.SAFE
+                                        enginePageOk = false
+                                        setLayerType(if (safeMode) View.LAYER_TYPE_NONE else View.LAYER_TYPE_HARDWARE, null)
 
                                         settings.apply {
                                             userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
@@ -302,10 +331,12 @@ class MainActivity : ComponentActivity() {
                                         webViewClient = SpotifyWebViewClient(
                                             onLoginRequired = {
                                                 loadUrl("https://accounts.spotify.com/login")
-                                            }
+                                            },
+                                            onPageOk = { enginePageOk = true },
+                                            onRendererGone = { onEngineFailure("the web engine crashed") }
                                         )
 
-                                        if (!proxyWanted) {
+                                        if (!proxyWanted || safeMode) {
                                             ProxyController.getInstance().clearProxyOverride(
                                                 Executors.newSingleThreadExecutor()
                                             ) { }
@@ -321,8 +352,15 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
 
+                                        val watched = this
+                                        postDelayed({
+                                            if (!enginePageOk && webView === watched && isOnline()) {
+                                                onEngineFailure("the player didn't load within 45 seconds")
+                                            }
+                                        }, 45_000)
+
                                         if (loggedIn) {
-                                            loadUrl("https://open.spotify.com/collection/tracks")
+                                            loadUrl(TweakPrefs.startPage(getSharedPreferences("spotilol_prefs", MODE_PRIVATE)).url)
                                         } else {
                                             loadUrl("https://accounts.spotify.com/login")
                                         }
@@ -355,6 +393,8 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            NetworkWarningBanner(Modifier.align(Alignment.TopCenter))
+
                             if (showDialog) {
                                 SleepTimerDialog(
                                     timerActive = timerActive,
@@ -363,7 +403,7 @@ class MainActivity : ComponentActivity() {
                                     onSelectMinute = { sleepTimerSelectedMinutes.intValue = it },
                                     onSetTimer = { minutes ->
                                         showSleepTimerDialog.value = false
-                                        if (minutes > 0) {
+                                        if (minutes != 0) {
                                             startSleepTimer(minutes)
                                         } else {
                                             cancelSleepTimer()
@@ -400,6 +440,15 @@ class MainActivity : ComponentActivity() {
 
     private fun startSleepTimer(minutes: Int) {
         cancelSleepTimer()
+        if (minutes < 0) {
+            sleepTimerActive.value = true
+            sleepTimerRemainingMs.longValue = -1L
+            webView?.evaluateJavascript(
+                "window.rsStopAfterTrack&&rsStopAfterTrack(true);if(window.timerBtn) timerBtn.style.color='#2d6';",
+                null
+            )
+            return
+        }
         val totalMs = minutes * 60 * 1000L
         sleepTimerActive.value = true
         sleepTimerRemainingMs.longValue = totalMs
@@ -432,7 +481,7 @@ class MainActivity : ComponentActivity() {
         sleepTimerActive.value = false
         sleepTimerRemainingMs.longValue = 0L
         webView?.evaluateJavascript(
-            "if(window.timerBtn) timerBtn.style.color='';",
+            "if(window.timerBtn) timerBtn.style.color='';window.rsStopAfterTrack&&rsStopAfterTrack(false);",
             null
         )
     }
@@ -451,7 +500,7 @@ class MainActivity : ComponentActivity() {
             val remainingSecs = timerRemainingMs / 1000
             val mins = remainingSecs / 60
             val secs = remainingSecs % 60
-            val timeStr = String.format("%d:%02d min remaining", mins, secs)
+            val timeStr = if (timerRemainingMs < 0) "Stops after this song" else String.format("%d:%02d min remaining", mins, secs)
 
             AlertDialog(
                 onDismissRequest = onDismiss,
@@ -579,6 +628,124 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun isOnline(): Boolean {
+        val cm = getSystemService(android.net.ConnectivityManager::class.java) ?: return true
+        return cm.activeNetwork != null
+    }
+
+    /** Moves to the next engine in the fallback chain and restarts the screen with it. */
+    private fun onEngineFailure(reason: String) {
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            val prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
+            val next = WebEngine.next(engineState.value)
+            if (!WebEngine.autoFallback(prefs) || next == null) {
+                Toast.makeText(this, "ReSpotifuck: ${reason}.", Toast.LENGTH_LONG).show()
+                return@runOnUiThread
+            }
+            WebEngine.fallBack(prefs, next, reason)
+            Toast.makeText(this, "${reason.replaceFirstChar { it.uppercase() }}. Switching to ${WebEngine.label(next)}.", Toast.LENGTH_LONG).show()
+            recreate()
+        }
+    }
+
+    private fun restartApp() {
+        LocalProxyManager.stop()
+        startActivity(
+            Intent(this, CertificateActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        )
+    }
+
+    private fun computeNetworkWarning(): NetWarning? {
+        val prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
+        if (WebEngine.isFallback(prefs)) {
+            return NetWarning(
+                "Running in ${WebEngine.label(engineState.value)} because ${WebEngine.reason(prefs) ?: "the web engine failed"}.",
+                "Retry"
+            ) { WebEngine.reset(prefs); recreate() }
+        }
+        if (!ProxySettings.enabled(prefs)) {
+            return NetWarning(
+                "The local proxy is off. Secure DNS and proxy ad filtering aren't active, and Spotify may not load.",
+                "Turn on"
+            ) { prefs.edit().putBoolean(ProxySettings.ENABLED, true).apply(); restartApp() }
+        }
+        if (!LocalProxyManager.isRunning) {
+            return NetWarning("The local proxy isn't running, so secure DNS isn't being used.", "Restart") { restartApp() }
+        }
+        if (!DnsSettings.enabled(prefs)) {
+            return NetWarning("Secure DNS is off. Lookups use your phone's normal DNS and trackers aren't blocked.", "Turn on") {
+                prefs.edit().putBoolean(DnsSettings.ENABLED, true).apply()
+                DohResolver.configure(prefs)
+            }
+        }
+        if (System.currentTimeMillis() - DohResolver.lastFallbackAt < 60_000) {
+            return NetWarning("Your secure DNS provider can't be reached, so your phone's DNS is being used for now.", "Settings") {
+                startActivity(Intent(this, SettingsActivity::class.java))
+            }
+        }
+        return null
+    }
+
+    @Composable
+    private fun NetworkWarningBanner(modifier: Modifier) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                networkWarning.value = computeNetworkWarning()
+                kotlinx.coroutines.delay(3000)
+            }
+        }
+        val w = networkWarning.value ?: return
+        if (dismissedWarning.value == w.text) return
+        Surface(
+            modifier = modifier.padding(10.dp).fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            shadowElevation = 6.dp
+        ) {
+            Row(Modifier.padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Warning, contentDescription = "Warning")
+                Spacer(Modifier.width(10.dp))
+                Text(w.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                TextButton(onClick = { w.action(); networkWarning.value = computeNetworkWarning() }) { Text(w.actionLabel, fontWeight = FontWeight.Bold) }
+                TextButton(onClick = { dismissedWarning.value = w.text }) { Text("Dismiss") }
+            }
+        }
+    }
+
+    @Composable
+    private fun BrowserFallbackScreen() {
+        val prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
+        Column(
+            Modifier.fillMaxSize().padding(28.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+            Spacer(Modifier.height(16.dp))
+            Text("Browser mode", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                (WebEngine.reason(prefs)?.let { "ReSpotifuck switched here because $it. " } ?: "") +
+                    "Spotify opens in your browser. Ad filtering and the custom player aren't available in this mode.",
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(20.dp))
+            Button(onClick = {
+                runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://open.spotify.com"))) }
+            }) { Text("Open Spotify in browser") }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = {
+                WebEngine.reset(prefs)
+                engineState.value = WebEngine.active(prefs)
+                recreate()
+            }) { Text("Try the web engine again") }
+        }
+    }
+
     private fun destroyWebView() {
         webView?.let {
             it.stopLoading()
@@ -651,6 +818,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (WebEngine.active(getSharedPreferences("spotilol_prefs", MODE_PRIVATE)) != engineState.value) {
+            recreate()
+            return
+        }
         AppLock.applyScreenCapturePolicy(window)
         val prefs = getSharedPreferences("spotilol_prefs", MODE_PRIVATE)
         serviceEnabledState.value = prefs.getBoolean("ServiceOn", true)
@@ -670,6 +841,8 @@ class MainActivity : ComponentActivity() {
                 append(SpotifyWebViewClient.buildThemeJs(prefs))
                 append("\n")
                 append(SpotifyWebViewClient.buildCustomCssJs(customCss))
+                append("\n")
+                append(TweakPrefs.flagsJs(prefs))
             }
             view.evaluateJavascript(js, null)
 
@@ -708,3 +881,5 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 }
+
+private class NetWarning(val text: String, val actionLabel: String, val action: () -> Unit)

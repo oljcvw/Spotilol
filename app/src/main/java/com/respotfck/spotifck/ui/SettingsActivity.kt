@@ -1,5 +1,7 @@
 package com.respotfck.spotifck.ui
 
+import androidx.compose.material.icons.filled.Web
+import com.respotfck.spotifck.webview.WebEngine
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -9,6 +11,25 @@ import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.widget.Toast
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.DataSaverOn
+import androidx.compose.material.icons.filled.ShuffleOn
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.VideocamOff
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Podcasts
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Apps
+import com.respotfck.spotifck.webview.TweakPrefs
+import com.respotfck.spotifck.SettingsBackup
+import com.respotfck.spotifck.AppIdentity
+import androidx.compose.foundation.Image
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Dialog
@@ -207,6 +228,119 @@ fun SettingsScreen(
     onClearCache: () -> Unit,
     onClearData: () -> Unit
 ) {
+    val appCtx = LocalContext.current
+    var showIconDialog by remember { mutableStateOf(false) }
+    var showStartPageDialog by remember { mutableStateOf(false) }
+    var showEngineDialog by remember { mutableStateOf(false) }
+    var engineChoice by remember { mutableStateOf(WebEngine.preferred(prefs)) }
+    var engineAuto by remember { mutableStateOf(WebEngine.autoFallback(prefs)) }
+    if (showEngineDialog) {
+        AlertDialog(
+            onDismissRequest = { showEngineDialog = false },
+            title = { Text("Web engine", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    WebEngine.engines.forEach { e ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable {
+                                engineChoice = e.id
+                                WebEngine.choose(prefs, e.id)
+                            }.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = engineChoice == e.id, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(e.label, fontWeight = FontWeight.SemiBold)
+                                Text(e.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Automatic fallback", fontWeight = FontWeight.SemiBold)
+                            Text("Switch to the next engine if this one crashes or the player doesn't load", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(checked = engineAuto, onCheckedChange = {
+                            engineAuto = it
+                            prefs.edit().putBoolean(WebEngine.AUTO, it).apply()
+                        })
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text("Installed provider: " + WebEngine.provider(appCtx), style = MaterialTheme.typography.bodySmall)
+                    Text("Android picks the WebView provider (System WebView, Chrome, Beta, Dev, Canary) for the whole phone in Developer options.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = {
+                        runCatching { appCtx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)) }
+                            .onFailure { Toast.makeText(appCtx, "Turn on Developer options first", Toast.LENGTH_SHORT).show() }
+                    }) { Text("Open Android WebView picker") }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showEngineDialog = false }) { Text("Done") } }
+        )
+    }
+    var identityIcon by remember { mutableStateOf(AppIdentity.icon(appCtx)) }
+    var identityName by remember { mutableStateOf(AppIdentity.name(appCtx)) }
+    var startPage by remember { mutableStateOf(TweakPrefs.startPage(prefs)) }
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            val ok = runCatching {
+                appCtx.contentResolver.openOutputStream(uri)!!.use { it.write(SettingsBackup.export(prefs).toByteArray()) }
+            }.isSuccess
+            Toast.makeText(appCtx, if (ok) "Settings backed up" else "Could not write the backup", Toast.LENGTH_SHORT).show()
+        }
+    }
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            val restored = runCatching {
+                SettingsBackup.import(prefs, appCtx.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() })
+            }
+            restored.onSuccess { n ->
+                Toast.makeText(appCtx, "Restored $n settings. Restarting…", Toast.LENGTH_SHORT).show()
+                restartForProxyChange(appCtx)
+            }.onFailure {
+                Toast.makeText(appCtx, "That file isn't a ReSpotifuck backup", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+    if (showIconDialog) {
+        IconNameDialog(
+            initialIcon = identityIcon,
+            initialName = identityName,
+            onApply = { icon, name ->
+                AppIdentity.apply(appCtx, icon, name)
+                identityIcon = icon
+                identityName = name
+                showIconDialog = false
+                Toast.makeText(appCtx, "Home screen icon changed to ${icon.label} · ${name.label}. It can take a few seconds to appear.", Toast.LENGTH_LONG).show()
+            },
+            onDismiss = { showIconDialog = false }
+        )
+    }
+    if (showStartPageDialog) {
+        AlertDialog(
+            onDismissRequest = { showStartPageDialog = false },
+            title = { Text("Start-up page", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    TweakPrefs.startPages.forEach { page ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable {
+                                startPage = page
+                                prefs.edit().putString(TweakPrefs.START_PAGE, page.id).apply()
+                                showStartPageDialog = false
+                            }.padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = startPage.id == page.id, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text(page.label)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showStartPageDialog = false }) { Text("Close") } }
+        )
+    }
     var settingsLocked by remember { mutableStateOf(prefs.getBoolean(SETTINGS_LOCKED, false)) }
     var showSettingsUnlock by remember { mutableStateOf(false) }
     fun setSettingsLocked(locked: Boolean) {
@@ -446,6 +580,15 @@ fun SettingsScreen(
                     else -> "Mobile CSS + JS"
                 }
                 SettingTile(
+                    title = "App icon & name",
+                    subtitle = "${identityIcon.label} · ${identityName.label}",
+                    icon = Icons.Default.Apps,
+                    onClick = { showIconDialog = true }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
                     title = "Theme",
                     subtitle = if (materialYou) "${themePreset.label} (Material You is on)" else themePreset.label,
                     icon = Icons.Default.ColorLens,
@@ -521,6 +664,34 @@ fun SettingsScreen(
                         onAmoledThemeChange(enabled)
                         prefs.edit().putBoolean("AmoledTheme", enabled).apply()
                     }
+                )
+            }
+
+            SettingSectionCard(
+                title = "TWEAKS",
+                icon = Icons.Default.Tune
+            ) {
+                PrefSwitchTile(prefs, TweakPrefs.HIDE_UPSELLS, true, "Hide Premium upsells", "Hide Upgrade / Explore Premium banners and the Create button", Icons.Default.VisibilityOff)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.HIDE_PODCASTS, false, "Hide podcasts & audiobooks", "Hide shows, episodes, audiobooks and video podcasts", Icons.Default.Podcasts)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.HIDE_SPONSORED, true, "Hide sponsored content", "Hide sponsored and promoted cards and playlists", Icons.Default.Block)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.HIDE_CANVAS, false, "Hide Canvas videos", "Stop the looping videos (saves data and battery)", Icons.Default.VideocamOff)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.LYRICS_FALLBACK, true, "Lyrics fallback (LRCLIB)", "Show lyrics from lrclib.net when Spotify has none", Icons.Default.Lyrics)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.REMEMBER_MODES, true, "Remember shuffle & repeat", "Restore your shuffle and repeat choice on launch", Icons.Default.Shuffle)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.NO_SMART_SHUFFLE, false, "Turn off Smart Shuffle", "Switch Smart Shuffle back to normal shuffle", Icons.Default.ShuffleOn)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                PrefSwitchTile(prefs, TweakPrefs.DATA_SAVER, false, "Data saver", "Smaller artwork and no Canvas videos", Icons.Default.DataSaverOn)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                SettingTile(
+                    title = "Start-up page",
+                    subtitle = startPage.label,
+                    icon = Icons.Default.Home,
+                    onClick = { showStartPageDialog = true }
                 )
             }
 
@@ -728,6 +899,33 @@ fun SettingsScreen(
                 title = "SYSTEM",
                 icon = Icons.Default.PowerSettingsNew
             ) {
+                SettingTile(
+                    title = "Back up settings",
+                    subtitle = "Save your settings to a file (your PIN is not included)",
+                    icon = Icons.Default.Backup,
+                    onClick = { backupLauncher.launch("respotifuck-settings.json") }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
+                    title = "Web engine",
+                    subtitle = WebEngine.label(engineChoice) + (if (WebEngine.isFallback(prefs)) " (now using ${WebEngine.label(WebEngine.active(prefs))})" else "") + " · " + WebEngine.provider(appCtx),
+                    icon = Icons.Default.Web,
+                    onClick = { showEngineDialog = true }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingTile(
+                    title = "Restore settings",
+                    subtitle = "Load settings from a backup file and restart",
+                    icon = Icons.Default.Restore,
+                    onClick = { restoreLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
                 SettingSwitchTile(
                     title = "Swipe to Stop Service",
                     subtitle = "Kill background service from recents",
@@ -1684,7 +1882,7 @@ private fun runNetworkTest(prefs: SharedPreferences): String {
     return lines.joinToString("\n\n")
 }
 
-private fun restartForProxyChange(context: android.content.Context) {
+internal fun restartForProxyChange(context: android.content.Context) {
     LocalProxyManager.stop()
     val intent = android.content.Intent(context, CertificateActivity::class.java)
         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -1772,3 +1970,87 @@ private fun CompareDialog(onOpen: (String) -> Unit, onDismiss: () -> Unit) {
 }
 
 private const val SETTINGS_LOCKED = "SettingsLocked"
+
+@Composable
+private fun PrefSwitchTile(
+    prefs: SharedPreferences,
+    key: String,
+    default: Boolean,
+    title: String,
+    subtitle: String,
+    icon: ImageVector
+) {
+    var on by remember { mutableStateOf(prefs.getBoolean(key, default)) }
+    SettingSwitchTile(title = title, subtitle = subtitle, icon = icon, checked = on) {
+        on = it
+        prefs.edit().putBoolean(key, it).apply()
+    }
+}
+
+@Composable
+private fun IconNameDialog(
+    initialIcon: AppIdentity.Icon,
+    initialName: AppIdentity.Name,
+    onApply: (AppIdentity.Icon, AppIdentity.Name) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var icon by remember { mutableStateOf(initialIcon) }
+    var name by remember { mutableStateOf(initialName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("App icon & name", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf("Classic & seasonal" to AppIdentity.icons.filter { it.id == "default" || it.seasonal },
+                    "Weird & meme" to AppIdentity.icons.filter { it.id != "default" && !it.seasonal }).forEach { (group, list) ->
+                    Text(group, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    list.chunked(4).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            row.forEach { option ->
+                                val selected = option.id == icon.id
+                                Column(
+                                    Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { icon = option }.padding(4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Image(
+                                        painter = painterResource(option.drawable),
+                                        contentDescription = option.label,
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black)
+                                            .border(
+                                                if (selected) 3.dp else 1.dp,
+                                                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                                CircleShape
+                                            )
+                                    )
+                                    Text(option.label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+                Text("Name", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                AppIdentity.names.forEach { option ->
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { name = option }.padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = option.id == name.id, onClick = null)
+                        Spacer(Modifier.width(10.dp))
+                        Text(option.label)
+                    }
+                }
+                Text(
+                    "Only the built-in designs and names can be used. Your home-screen shortcut is replaced when you apply.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onApply(icon, name) }) { Text("Apply") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}

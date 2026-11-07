@@ -80,6 +80,7 @@ object DohResolver {
     @Volatile var endpoint = DnsSettings.providers.first().url
         private set
     @Volatile var fallbackToSystem = true
+    @Volatile var lastFallbackAt = 0L
         private set
 
     private class Entry(val addresses: List<InetAddress>, val expiresAt: Long)
@@ -107,6 +108,7 @@ object DohResolver {
             throw e
         } catch (e: Exception) {
             if (!fallbackToSystem) throw UnknownHostException("DoH lookup for $host failed: ${e.message}")
+            lastFallbackAt = System.currentTimeMillis()
             Log.w(TAG, "DoH lookup for $host failed (${e.message}), using system DNS")
             InetAddress.getAllByName(host).toList()
         }

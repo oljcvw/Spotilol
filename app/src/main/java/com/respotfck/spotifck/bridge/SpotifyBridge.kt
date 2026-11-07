@@ -5,6 +5,8 @@ import android.view.View
 import android.webkit.JavascriptInterface
 import android.widget.Toast
 import com.respotfck.spotifck.service.MediaNotificationService
+import com.respotfck.spotifck.webview.LrcLib
+import com.respotfck.spotifck.webview.TweakPrefs
 import java.lang.ref.WeakReference
 
 class SpotifyBridge(activityRef: WeakReference<Activity>) {
@@ -15,6 +17,8 @@ class SpotifyBridge(activityRef: WeakReference<Activity>) {
     var onMediaStatus: ((String) -> Unit)? = null
     var onMediaPosition: ((Long) -> Unit)? = null
     var onTimerDialogRequest: (() -> Unit)? = null
+    var onSleepTimerDone: (() -> Unit)? = null
+    var evalJs: ((String) -> Unit)? = null
 
     @JavascriptInterface
     fun loginDetected() {
@@ -96,5 +100,30 @@ class SpotifyBridge(activityRef: WeakReference<Activity>) {
         activity.runOnUiThread {
             onTimerDialogRequest?.invoke()
         }
+    }
+
+    @JavascriptInterface
+    fun savePlayerModes(shuffle: Boolean, repeat: String?) {
+        val activity = activityRef.get() ?: return
+        activity.getSharedPreferences("spotilol_prefs", 0).edit()
+            .putBoolean(TweakPrefs.SAVED_SHUFFLE, shuffle)
+            .putString(TweakPrefs.SAVED_REPEAT, repeat ?: "off")
+            .apply()
+    }
+
+    @JavascriptInterface
+    fun sleepTimerDone() {
+        val activity = activityRef.get() ?: return
+        activity.runOnUiThread { onSleepTimerDone?.invoke() }
+    }
+
+    @JavascriptInterface
+    fun fetchLyrics(artist: String?, title: String?, duration: Int) {
+        val t = title?.trim().orEmpty()
+        if (t.isEmpty()) return
+        Thread {
+            val res = LrcLib.fetch(artist.orEmpty().trim(), t, duration)
+            evalJs?.invoke("window.rsLrcResult&&rsLrcResult(${res ?: "null"})")
+        }.start()
     }
 }

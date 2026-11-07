@@ -28,12 +28,919 @@
             android:name=".ui.CertificateActivity"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.ReSpotifuck.Launch">
+            android:theme="@style/Theme.ReSpotifuck.Launch" />
+
+        <!-- Launcher entries for Settings > App icon & name. Exactly one is enabled at a time. -->
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_default_respotifuck"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_default_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_default_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_default_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_default_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_halloween_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_halloween"
+            android:roundIcon="@mipmap/ic_launcher_halloween"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_halloween_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_halloween"
+            android:roundIcon="@mipmap/ic_launcher_halloween"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_halloween_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_halloween"
+            android:roundIcon="@mipmap/ic_launcher_halloween"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_halloween_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_halloween"
+            android:roundIcon="@mipmap/ic_launcher_halloween"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_halloween_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_halloween"
+            android:roundIcon="@mipmap/ic_launcher_halloween"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_christmas_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_christmas"
+            android:roundIcon="@mipmap/ic_launcher_christmas"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_christmas_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_christmas"
+            android:roundIcon="@mipmap/ic_launcher_christmas"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_christmas_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_christmas"
+            android:roundIcon="@mipmap/ic_launcher_christmas"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_christmas_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_christmas"
+            android:roundIcon="@mipmap/ic_launcher_christmas"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_christmas_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_christmas"
+            android:roundIcon="@mipmap/ic_launcher_christmas"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_valentine_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_valentine"
+            android:roundIcon="@mipmap/ic_launcher_valentine"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_valentine_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_valentine"
+            android:roundIcon="@mipmap/ic_launcher_valentine"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_valentine_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_valentine"
+            android:roundIcon="@mipmap/ic_launcher_valentine"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_valentine_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_valentine"
+            android:roundIcon="@mipmap/ic_launcher_valentine"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_valentine_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_valentine"
+            android:roundIcon="@mipmap/ic_launcher_valentine"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_easter_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_easter"
+            android:roundIcon="@mipmap/ic_launcher_easter"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_easter_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_easter"
+            android:roundIcon="@mipmap/ic_launcher_easter"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_easter_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_easter"
+            android:roundIcon="@mipmap/ic_launcher_easter"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_easter_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_easter"
+            android:roundIcon="@mipmap/ic_launcher_easter"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_easter_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_easter"
+            android:roundIcon="@mipmap/ic_launcher_easter"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_summer_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_summer"
+            android:roundIcon="@mipmap/ic_launcher_summer"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_summer_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_summer"
+            android:roundIcon="@mipmap/ic_launcher_summer"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_summer_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_summer"
+            android:roundIcon="@mipmap/ic_launcher_summer"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_summer_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_summer"
+            android:roundIcon="@mipmap/ic_launcher_summer"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_summer_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_summer"
+            android:roundIcon="@mipmap/ic_launcher_summer"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_newyear_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_newyear"
+            android:roundIcon="@mipmap/ic_launcher_newyear"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_newyear_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_newyear"
+            android:roundIcon="@mipmap/ic_launcher_newyear"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_newyear_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_newyear"
+            android:roundIcon="@mipmap/ic_launcher_newyear"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_newyear_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_newyear"
+            android:roundIcon="@mipmap/ic_launcher_newyear"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_newyear_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_newyear"
+            android:roundIcon="@mipmap/ic_launcher_newyear"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_deepfried_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_deepfried"
+            android:roundIcon="@mipmap/ic_launcher_deepfried"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_deepfried_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_deepfried"
+            android:roundIcon="@mipmap/ic_launcher_deepfried"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_deepfried_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_deepfried"
+            android:roundIcon="@mipmap/ic_launcher_deepfried"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_deepfried_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_deepfried"
+            android:roundIcon="@mipmap/ic_launcher_deepfried"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_deepfried_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_deepfried"
+            android:roundIcon="@mipmap/ic_launcher_deepfried"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_pixel_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pixel"
+            android:roundIcon="@mipmap/ic_launcher_pixel"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_pixel_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pixel"
+            android:roundIcon="@mipmap/ic_launcher_pixel"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_pixel_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pixel"
+            android:roundIcon="@mipmap/ic_launcher_pixel"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_pixel_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pixel"
+            android:roundIcon="@mipmap/ic_launcher_pixel"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_pixel_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pixel"
+            android:roundIcon="@mipmap/ic_launcher_pixel"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_upsidedown_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_upsidedown"
+            android:roundIcon="@mipmap/ic_launcher_upsidedown"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_upsidedown_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_upsidedown"
+            android:roundIcon="@mipmap/ic_launcher_upsidedown"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_upsidedown_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_upsidedown"
+            android:roundIcon="@mipmap/ic_launcher_upsidedown"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_upsidedown_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_upsidedown"
+            android:roundIcon="@mipmap/ic_launcher_upsidedown"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_upsidedown_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_upsidedown"
+            android:roundIcon="@mipmap/ic_launcher_upsidedown"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_glitch_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_glitch"
+            android:roundIcon="@mipmap/ic_launcher_glitch"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_glitch_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_glitch"
+            android:roundIcon="@mipmap/ic_launcher_glitch"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_glitch_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_glitch"
+            android:roundIcon="@mipmap/ic_launcher_glitch"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_glitch_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_glitch"
+            android:roundIcon="@mipmap/ic_launcher_glitch"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_glitch_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_glitch"
+            android:roundIcon="@mipmap/ic_launcher_glitch"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cursed_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cursed"
+            android:roundIcon="@mipmap/ic_launcher_cursed"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cursed_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cursed"
+            android:roundIcon="@mipmap/ic_launcher_cursed"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cursed_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cursed"
+            android:roundIcon="@mipmap/ic_launcher_cursed"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cursed_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cursed"
+            android:roundIcon="@mipmap/ic_launcher_cursed"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cursed_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cursed"
+            android:roundIcon="@mipmap/ic_launcher_cursed"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cat_respotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cat"
+            android:roundIcon="@mipmap/ic_launcher_cat"
+            android:label="ReSpotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cat_spotifuck"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cat"
+            android:roundIcon="@mipmap/ic_launcher_cat"
+            android:label="Spotifuck"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cat_respotify"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cat"
+            android:roundIcon="@mipmap/ic_launcher_cat"
+            android:label="ReSpotify"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cat_spotilol"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cat"
+            android:roundIcon="@mipmap/ic_launcher_cat"
+            android:label="Spotilol"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.respotfck.spotifck.ui.Launcher_cat_spotifree"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cat"
+            android:roundIcon="@mipmap/ic_launcher_cat"
+            android:label="SpotiFree"
+            android:targetActivity=".ui.CertificateActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <activity
             android:name=".ui.MainActivity"
