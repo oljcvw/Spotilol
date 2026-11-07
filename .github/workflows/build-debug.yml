@@ -71,7 +71,7 @@ jobs:
         shell: bash
         run: |
           APK_DIR="app/build/outputs/apk/$BUILD_TYPE_LOWER"
-          APK_PATH="$(ls "$APK_DIR"/ReSpotifuck-*-"$BUILD_TYPE_LOWER".apk 2>/dev/null | head -n1)"
+          APK_PATH="$(ls "$APK_DIR"/ReSpotifuck-*-"$BUILD_TYPE_LOWER".apk 2>/dev/null | head -n1 || true)"
           OUTPUT_NAME="respotifuck-$BUILD_TYPE_LOWER-$GITHUB_RUN_NUMBER.apk"
 
           if [[ -z "$APK_PATH" ]]; then
