@@ -47,13 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.respotfck.spotifck.proxy.LocalProxyManager
 import com.respotfck.spotifck.ui.theme.SpotifyTheme
+import com.respotfck.spotifck.ui.theme.ThemePrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val MonochromeAccent = Color(0xFFE0E0E0)
-private val MonochromeText = Color(0xFFFFFFFF)
 
 // Long enough for the intro animation to land; runs in parallel with proxy start-up.
 private const val MIN_SPLASH_MS = 1000L
@@ -107,7 +106,12 @@ class CertificateActivity : ComponentActivity() {
                 }
             }
 
-            SpotifyTheme {
+            val themePrefs = remember { getSharedPreferences("spotilol_prefs", MODE_PRIVATE) }
+            SpotifyTheme(
+                useDynamicColor = themePrefs.getBoolean("MaterialYou", false),
+                amoled = themePrefs.getBoolean("AmoledTheme", false),
+                preset = ThemePrefs.preset(themePrefs)
+            ) {
                 if (!disclosureAccepted) {
                     LaunchSplash(status = null)
                     FirstRunDisclosure(
@@ -231,7 +235,7 @@ fun CACertDialog(
         Text(
             text = "Certificate Required",
             style = MaterialTheme.typography.headlineSmall,
-            color = MonochromeAccent,
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
 
@@ -274,14 +278,14 @@ fun CACertDialog(
                 onClick = onExport,
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Export .pem", color = MonochromeAccent)
+                Text("Export .pem", color = MaterialTheme.colorScheme.primary)
             }
 
             TextButton(
                 onClick = onCheck,
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Check", color = Color(0xFF1DB954))
+                Text("Check", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -292,14 +296,14 @@ private fun Step(number: Int, text: String) {
     Row(verticalAlignment = Alignment.Top) {
         Surface(
             shape = CircleShape,
-            color = MonochromeAccent,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(22.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = "$number",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold
                 )
             }

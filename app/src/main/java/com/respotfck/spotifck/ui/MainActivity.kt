@@ -83,6 +83,8 @@ import com.respotfck.spotifck.bridge.SpotifyBridge
 import com.respotfck.spotifck.proxy.LocalProxyManager
 import com.respotfck.spotifck.service.MediaNotificationService
 import com.respotfck.spotifck.ui.theme.SpotifyTheme
+import com.respotfck.spotifck.ui.theme.ThemePreset
+import com.respotfck.spotifck.ui.theme.ThemePrefs
 import com.respotfck.spotifck.update.UpdateChecker
 import com.respotfck.spotifck.webview.SpotifyWebChromeClient
 import com.respotfck.spotifck.webview.SpotifyWebViewClient
@@ -98,6 +100,7 @@ class MainActivity : ComponentActivity() {
     private val serviceEnabledState = mutableStateOf(true)
     private val materialYouState = mutableStateOf(false)
     private val amoledState = mutableStateOf(false)
+    private val themePresetState = mutableStateOf(ThemePreset.DEFAULT)
 
     private val showSleepTimerDialog = mutableStateOf(false)
     private val sleepTimerSelectedMinutes = mutableIntStateOf(0)
@@ -155,6 +158,7 @@ class MainActivity : ComponentActivity() {
         serviceEnabledState.value = prefs.getBoolean("ServiceOn", true)
         materialYouState.value = prefs.getBoolean("MaterialYou", false)
         amoledState.value = prefs.getBoolean("AmoledTheme", false)
+        themePresetState.value = ThemePrefs.preset(prefs)
 
         setContent {
             val serviceEnabled = serviceEnabledState.value
@@ -164,7 +168,7 @@ class MainActivity : ComponentActivity() {
             val timerActive = sleepTimerActive.value
             val loadProgress = loadingProgress.intValue
 
-            SpotifyTheme(useDynamicColor = materialYou, amoled = amoled) {
+            SpotifyTheme(useDynamicColor = materialYou, amoled = amoled, preset = themePresetState.value) {
                 Scaffold(
                     topBar = {
                         TopAppBar(
@@ -280,7 +284,7 @@ class MainActivity : ComponentActivity() {
                                         }
 
                                         setInitialScale(100)
-                                        setBackgroundColor(0xFF000000.toInt())
+                                        setBackgroundColor(if (amoled) 0xFF000000.toInt() else themePresetState.value.background.toInt())
 
                                         if (WebViewFeature.isFeatureSupported(WebViewFeature.BACK_FORWARD_CACHE)) {
                                             WebSettingsCompat.setBackForwardCacheEnabled(settings, true)
@@ -340,7 +344,7 @@ class MainActivity : ComponentActivity() {
                                         .height(2.dp)
                                         .align(Alignment.TopCenter)
                                         .alpha(progressAlpha),
-                                    color = Color(0xFF22DD66),
+                                    color = MaterialTheme.colorScheme.primary,
                                     trackColor = Color.Transparent,
                                 )
                             }
@@ -646,6 +650,7 @@ class MainActivity : ComponentActivity() {
         serviceEnabledState.value = prefs.getBoolean("ServiceOn", true)
         materialYouState.value = prefs.getBoolean("MaterialYou", false)
         amoledState.value = prefs.getBoolean("AmoledTheme", false)
+        themePresetState.value = ThemePrefs.preset(prefs)
 
         val customCss = prefs.getString("CustomCss", "") ?: ""
         val amoledEnabled = prefs.getBoolean("AmoledTheme", false)
@@ -655,6 +660,8 @@ class MainActivity : ComponentActivity() {
             val js = buildString {
                 append("window.closeNpPref=$closeNowPlay;\n")
                 append(SpotifyWebViewClient.buildAmoledJs(amoledEnabled))
+                append("\n")
+                append(SpotifyWebViewClient.buildThemeJs(prefs))
                 append("\n")
                 append(SpotifyWebViewClient.buildCustomCssJs(customCss))
             }

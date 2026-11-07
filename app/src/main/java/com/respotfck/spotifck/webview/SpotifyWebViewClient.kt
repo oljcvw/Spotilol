@@ -1,5 +1,6 @@
 package com.respotfck.spotifck.webview
 
+import com.respotfck.spotifck.ui.theme.ThemePrefs
 import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
@@ -107,6 +108,7 @@ class SpotifyWebViewClient(
         }
         val cleanJs = stripConsoleLogs(js) + "\n" +
                 buildAmoledJs(amoledEnabled) + "\n" +
+                buildThemeJs(prefs) + "\n" +
                 buildCustomCssJs(customCss)
         view.evaluateJavascript(cleanJs, null)
     }
@@ -862,6 +864,57 @@ class SpotifyWebViewClient(
 
         private fun isHostOrSubdomain(host: String, domain: String): Boolean {
             return host == domain || host.endsWith(".$domain")
+        }
+
+        /** Recolours the web player to match the selected [ThemePreset]. */
+        fun buildThemeJs(prefs: android.content.SharedPreferences): String {
+            val preset = ThemePrefs.preset(prefs)
+            val accent = ThemePrefs.webAccent(prefs)
+            val tint = ThemePrefs.webTint(prefs) && !prefs.getBoolean("AmoledTheme", false)
+            val css = buildString {
+                if (accent) {
+                    val a = hex(preset.accent)
+                    append(".encore-dark-theme,.encore-dark-theme .encore-base-set{--text-bright-accent:$a;--essential-bright-accent:$a}")
+                    append(".encore-dark-theme .encore-bright-accent-set,.encore-bright-accent-set{--background-base:$a;")
+                    append("--background-highlight:${hex(mix(preset.accent, 0xFFFFFFFF, 0.15f))};")
+                    append("--background-press:${hex(mix(preset.accent, 0xFF000000, 0.15f))};")
+                    append("--text-base:${hex(preset.background)};--essential-base:${hex(preset.background)}}")
+                    append("[data-testid=progress-bar]{--fg-color:$a}")
+                }
+                if (tint) {
+                    val bg = hex(preset.background)
+                    val s = hex(preset.surface)
+                    val h = hex(preset.surfaceHigh)
+                    append(".encore-dark-theme,.encore-dark-theme .encore-base-set{--background-base:$bg;")
+                    append("--background-highlight:$h;--background-press:$s;--background-elevated-base:$s;")
+                    append("--background-elevated-highlight:$h;--background-elevated-press:$s;--background-tinted-base:$h}")
+                    append("body,html{background:$bg!important}")
+                    append("aside[data-testid=now-playing-bar]{background:$bg!important}")
+                }
+            }
+            val jsonCss = JSONObject.quote(css)
+            return """
+                (function(){
+                    var st = document.getElementById('respotifuck-theme');
+                    if ($jsonCss === "") { if (st) st.remove(); return; }
+                    if (!st) { st = document.createElement('style'); st.id = 'respotifuck-theme'; }
+                    st.textContent = $jsonCss;
+                    var target = document.head || document.documentElement;
+                    if (target && !st.parentNode) target.appendChild(st);
+                })();
+            """.trimIndent()
+        }
+
+        private fun hex(argb: Long) = String.format("#%06X", argb and 0xFFFFFF)
+
+        private fun mix(from: Long, to: Long, t: Float): Long {
+            fun ch(v: Long, shift: Int) = ((v shr shift) and 0xFF).toInt()
+            var out = 0xFF000000
+            for (shift in intArrayOf(16, 8, 0)) {
+                val c = (ch(from, shift) + (ch(to, shift) - ch(from, shift)) * t).toInt().coerceIn(0, 255)
+                out = out or (c.toLong() shl shift)
+            }
+            return out
         }
 
         fun buildCustomCssJs(css: String): String {

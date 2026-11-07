@@ -8,22 +8,25 @@
     <color name="spotify_medium_gray">#FF535353</color>
     <color name="spotify_light_gray">#FFB3B3B3</color>
 
+    <!-- Default "ReSpotifuck Red" theme (matches ThemePreset.ROSE) -->
+    <color name="respotifuck_background">#FF140A0C</color>
+
     <!-- Material 3 Primary Colors -->
-    <color name="primary">#FFE0E0E0</color>
-    <color name="on_primary">#FF121212</color>
-    <color name="primary_container">#FF2E2E2E</color>
+    <color name="primary">#FFFF6F6F</color>
+    <color name="on_primary">#FF140A0C</color>
+    <color name="primary_container">#FF4A1C22</color>
     <color name="on_primary_container">#FFF5F5F5</color>
 
     <!-- Material 3 Surface Colors -->
-    <color name="surface">@color/spotify_black</color>
+    <color name="surface">@color/respotifuck_background</color>
     <color name="on_surface">@color/spotify_white</color>
-    <color name="surface_variant">@color/spotify_black</color>
+    <color name="surface_variant">#FF2A171B</color>
     <color name="on_surface_variant">@color/spotify_light_gray</color>
 
     <!-- Material 3 Background -->
-    <color name="background">@color/spotify_black</color>
+    <color name="background">@color/respotifuck_background</color>
     <color name="on_background">@color/spotify_white</color>
 
     <!-- Material 3 Status Bar -->
-    <color name="status_bar">#FF000000</color>
+    <color name="status_bar">@color/respotifuck_background</color>
 </resources>

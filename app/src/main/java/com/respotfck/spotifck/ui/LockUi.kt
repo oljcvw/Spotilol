@@ -1,7 +1,7 @@
 package com.respotfck.spotifck.ui
 
-import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -40,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,7 +50,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val LockRed = Color(0xFFD90218)
 
 /** Full-screen, touch-swallowing surface used for lock and PIN screens. */
 @Composable
@@ -59,7 +57,7 @@ private fun SecureSurface(content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
             .systemBarsPadding(),
         contentAlignment = Alignment.Center
@@ -76,8 +74,8 @@ private fun PinDots(length: Int, max: Int, shake: Float) {
             Box(
                 Modifier
                     .size(14.dp)
-                    .background(if (i < length) LockRed else Color.Transparent, CircleShape)
-                    .border(1.5.dp, if (i < length) LockRed else Color.Gray, CircleShape)
+                    .background(if (i < length) MaterialTheme.colorScheme.primary else Color.Transparent, CircleShape)
+                    .border(1.5.dp, if (i < length) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
             )
         }
     }
@@ -93,7 +91,7 @@ private fun PinPad(onDigit: (Char) -> Unit, onBackspace: () -> Unit, onSubmit: (
                     Box(
                         modifier = Modifier
                             .size(72.dp)
-                            .background(Color.White.copy(alpha = if (key == '>' && !submitEnabled) 0.03f else 0.08f), CircleShape)
+                            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = if (key == '>' && !submitEnabled) 0.03f else 0.08f), CircleShape)
                             .clickable(enabled = key != '>' || submitEnabled) {
                                 when (key) {
                                     '<' -> onBackspace()
@@ -104,9 +102,9 @@ private fun PinPad(onDigit: (Char) -> Unit, onBackspace: () -> Unit, onSubmit: (
                         contentAlignment = Alignment.Center
                     ) {
                         when (key) {
-                            '<' -> Icon(Icons.AutoMirrored.Filled.Backspace, "Delete", tint = Color.White)
-                            '>' -> Text("OK", color = if (submitEnabled) LockRed else Color.Gray, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            else -> Text(key.toString(), color = Color.White, fontSize = 28.sp)
+                            '<' -> Icon(Icons.AutoMirrored.Filled.Backspace, "Delete", tint = MaterialTheme.colorScheme.onBackground)
+                            '>' -> Text("OK", color = if (submitEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            else -> Text(key.toString(), color = MaterialTheme.colorScheme.onBackground, fontSize = 28.sp)
                         }
                     }
                 }
@@ -152,17 +150,17 @@ fun PinEntryScreen(
 
     SecureSurface {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-            Icon(Icons.Default.Lock, null, tint = LockRed, modifier = Modifier.size(44.dp))
+            Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(44.dp))
             Spacer(Modifier.height(16.dp))
-            Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = MaterialTheme.colorScheme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
-            Text(subtitle, color = Color.Gray, textAlign = TextAlign.Center, fontSize = 14.sp)
+            Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, fontSize = 14.sp)
             Spacer(Modifier.height(28.dp))
             PinDots(pin.length, AppLock.MAX_PIN, shake.value)
             Spacer(Modifier.height(14.dp))
             Text(
                 disabledMessage ?: error ?: " ",
-                color = LockRed, fontSize = 13.sp, textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, textAlign = TextAlign.Center,
                 modifier = Modifier.height(36.dp)
             )
             Spacer(Modifier.height(10.dp))
@@ -175,7 +173,7 @@ fun PinEntryScreen(
             )
             if (secondaryLabel != null && onSecondary != null) {
                 Spacer(Modifier.height(16.dp))
-                TextButton(onClick = onSecondary) { Text(secondaryLabel, color = Color.Gray) }
+                TextButton(onClick = onSecondary) { Text(secondaryLabel, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
     }
@@ -185,7 +183,7 @@ fun PinEntryScreen(
 @Composable
 fun AppLockOverlay() {
     if (!AppLock.locked.value) return
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
     BackHandler { activity?.moveTaskToBack(true) }
     var lockoutMs by remember { mutableLongStateOf(AppLock.lockoutRemainingMs()) }
     LaunchedEffect(lockoutMs > 0) {
@@ -271,12 +269,12 @@ fun PinVerifyFlow(title: String, onVerified: () -> Unit, onCancel: () -> Unit) {
 fun PinPromptDialog(onSetPin: () -> Unit, onSkip: () -> Unit, onNo: () -> Unit) {
     AlertDialog(
         onDismissRequest = {},
-        icon = { Icon(Icons.Default.Lock, null, tint = LockRed) },
+        icon = { Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.primary) },
         title = { Text("Protect ReSpotifuck with a PIN?", fontWeight = FontWeight.Bold) },
         text = {
             Text("A PIN keeps others from opening the app and your Spotify account on this phone. You can change this later in Settings › Privacy & Lock.")
         },
-        confirmButton = { TextButton(onClick = onSetPin) { Text("Set PIN", color = LockRed, fontWeight = FontWeight.Bold) } },
+        confirmButton = { TextButton(onClick = onSetPin) { Text("Set PIN", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) } },
         dismissButton = {
             Row {
                 TextButton(onClick = onNo) { Text("No") }

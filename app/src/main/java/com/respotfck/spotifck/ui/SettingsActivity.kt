@@ -92,6 +92,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.respotfck.spotifck.R
 import com.respotfck.spotifck.ui.theme.SpotifyTheme
+import com.respotfck.spotifck.ui.theme.ThemePreset
+import com.respotfck.spotifck.ui.theme.ThemePrefs
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -116,13 +121,19 @@ class SettingsActivity : ComponentActivity() {
         setContent {
             var materialYou by remember { mutableStateOf(prefs.getBoolean("MaterialYou", false)) }
             var amoledTheme by remember { mutableStateOf(prefs.getBoolean("AmoledTheme", false)) }
-            SpotifyTheme(useDynamicColor = materialYou, amoled = amoledTheme) {
+            var themePreset by remember { mutableStateOf(ThemePrefs.preset(prefs)) }
+            SpotifyTheme(useDynamicColor = materialYou, amoled = amoledTheme, preset = themePreset) {
                 SettingsScreen(
                     prefs = prefs,
                     materialYou = materialYou,
                     onMaterialYouChange = { materialYou = it },
                     amoledThemeState = amoledTheme,
                     onAmoledThemeChange = { amoledTheme = it },
+                    themePreset = themePreset,
+                    onThemePresetChange = {
+                        themePreset = it
+                        prefs.edit().putString(ThemePrefs.PRESET, it.key).apply()
+                    },
                     onBack = { finish() },
                     onClearCache = { clearWebViewCache() },
                     onClearData = { clearAllData() }
@@ -167,6 +178,8 @@ fun SettingsScreen(
     onMaterialYouChange: (Boolean) -> Unit,
     amoledThemeState: Boolean,
     onAmoledThemeChange: (Boolean) -> Unit,
+    themePreset: ThemePreset = ThemePreset.DEFAULT,
+    onThemePresetChange: (ThemePreset) -> Unit = {},
     onBack: () -> Unit,
     onClearCache: () -> Unit,
     onClearData: () -> Unit
@@ -188,6 +201,9 @@ fun SettingsScreen(
     var showAutoPlayDialog by remember { mutableStateOf(false) }
     var showGuiModeDialog by remember { mutableStateOf(false) }
     var showCustomCssDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var webAccent by remember { mutableStateOf(ThemePrefs.webAccent(prefs)) }
+    var webTint by remember { mutableStateOf(ThemePrefs.webTint(prefs)) }
     var pinEnabled by remember { mutableStateOf(AppLock.isPinSet()) }
     var lockTimeout by remember { mutableStateOf(AppLock.lockTimeoutMs()) }
     var captureAllowed by remember { mutableStateOf(AppLock.isScreenCaptureAllowed()) }
@@ -331,6 +347,41 @@ fun SettingsScreen(
                     "none" -> "None"
                     else -> "Mobile CSS + JS"
                 }
+                SettingTile(
+                    title = "Theme",
+                    subtitle = if (materialYou) "${themePreset.label} (Material You is on)" else themePreset.label,
+                    icon = Icons.Default.ColorLens,
+                    onClick = { showThemeDialog = true }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingSwitchTile(
+                    title = "Theme the Spotify player",
+                    subtitle = "Recolour Spotify's green buttons and highlights",
+                    icon = Icons.Default.Brush,
+                    checked = webAccent,
+                    onCheckedChange = { enabled ->
+                        webAccent = enabled
+                        prefs.edit().putBoolean(ThemePrefs.WEB_ACCENT, enabled).apply()
+                    }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                SettingSwitchTile(
+                    title = "Tinted backgrounds",
+                    subtitle = if (amoledTheme) "Off while AMOLED is on" else "Blend the theme colour into the player's backgrounds",
+                    icon = Icons.Default.FormatColorFill,
+                    checked = webTint,
+                    onCheckedChange = { enabled ->
+                        webTint = enabled
+                        prefs.edit().putBoolean(ThemePrefs.WEB_TINT, enabled).apply()
+                    }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
                 SettingTile(
                     title = "GUI Hack Mode",
                     subtitle = guiLabel,
@@ -693,6 +744,14 @@ fun SettingsScreen(
         )
     }
 
+    if (showThemeDialog) {
+        ThemePresetDialog(
+            selected = themePreset,
+            onSelect = onThemePresetChange,
+            onDismiss = { showThemeDialog = false }
+        )
+    }
+
     if (showGuiModeDialog) {
         SingleChoiceDialog(
             title = "GUI Hack Mode",
@@ -930,6 +989,69 @@ fun SettingSwitchTile(
             )
         )
     }
+}
+
+@Composable
+fun ThemePresetDialog(
+    selected: ThemePreset,
+    onSelect: (ThemePreset) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        title = { Text("Theme", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                ThemePreset.entries.forEach { preset ->
+                    val isSelected = preset == selected
+                    val accent = Color(preset.accent)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(preset.surface))
+                            .border(
+                                if (isSelected) 2.dp else 1.dp,
+                                if (isSelected) accent else Color.White.copy(alpha = 0.08f),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .clickable { onSelect(preset) }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Color(preset.background), CircleShape)
+                                .border(2.dp, accent, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(Modifier.size(16.dp).background(accent, CircleShape))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            preset.label,
+                            modifier = Modifier.weight(1f),
+                            color = if (isSelected) accent else Color.White,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        )
+                        if (preset == ThemePreset.DEFAULT) {
+                            Text("Default", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Done", color = MaterialTheme.colorScheme.primary) }
+        }
+    )
 }
 
 @Composable
