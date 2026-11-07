@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Screenshot
 import androidx.compose.material.icons.filled.Password
@@ -806,6 +807,22 @@ fun SettingsScreen(
                         )
                     }
                 )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                var showCompare by remember { mutableStateOf(false) }
+                SettingTile(
+                    title = "Compare with Spotilol & Spotifuck",
+                    subtitle = "What this app inherits and what ReSpotifuck adds",
+                    icon = Icons.Default.Compare,
+                    onClick = { showCompare = true }
+                )
+                if (showCompare) {
+                    CompareDialog(
+                        onOpen = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
+                        onDismiss = { showCompare = false }
+                    )
+                }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
@@ -1592,4 +1609,84 @@ private fun restartForProxyChange(context: android.content.Context) {
     val intent = android.content.Intent(context, CertificateActivity::class.java)
         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
     context.startActivity(intent)
+}
+
+private class CompareApp(val name: String, val role: String, val url: String, val points: List<String>)
+
+private val compareApps = listOf(
+    CompareApp(
+        "Spotifuck", "The original project by deviato", "https://github.com/deviato/Spotifuck",
+        listOf(
+            "Reverse-engineered Spotify's web player to filter audio ads",
+            "The ad-filtering approach the later forks are built on"
+        )
+    ),
+    CompareApp(
+        "Spotilol", "Android app built on Spotifuck's work", "https://github.com/oljcvw/Spotilol",
+        listOf(
+            "Spotify web player in an Android WebView, with audio ad filtering",
+            "Media notification, lock screen, Bluetooth and Wear OS controls",
+            "Autoplay modes, Take Control, Android Auto controls",
+            "Pause/resume on Bluetooth or headphone disconnect",
+            "AMOLED, Material You and custom CSS",
+            "Local HTTPS proxy with its own CA certificate",
+            "Update checker"
+        )
+    ),
+    CompareApp(
+        "ReSpotifuck", "This app: everything in Spotilol, plus", "https://github.com/ReSpotF-ck/-ReSpotif-ck-App",
+        listOf(
+            "Faster proxy: no 32-connection limit, connection reuse, buffered I/O, no Nagle delay",
+            "Faster start-up: no fixed delays, offline certificate check, WebView cache kept",
+            "Secure DNS (DNS-over-HTTPS) via AdGuard, on by default, with editable Proxy & DNS settings",
+            "Fixed bottom player bar: correct track, artist and album art, working shuffle",
+            "Optional PIN lock with lockout, offered on first install",
+            "Screen capture blocked by default, unlocked with a puzzle",
+            "Theme presets with ReSpotifuck Red as the default",
+            "Animated launch splash"
+        )
+    )
+)
+
+@Composable
+private fun CompareDialog(onOpen: (String) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.Compare, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        title = { Text("How ReSpotifuck compares", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                compareApps.forEach { app ->
+                    val isThis = app.name == "ReSpotifuck"
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (isThis) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth().clickable { onOpen(app.url) }
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                app.name,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isThis) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(app.role, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            app.points.forEach { point ->
+                                Text("• $point", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+                Text(
+                    "Tap a card to open its project page. ReSpotifuck is not affiliated with Spotify.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+    )
 }

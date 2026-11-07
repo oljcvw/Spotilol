@@ -5,7 +5,11 @@
 <h1 align="center">ReSpotifuck</h1>
 
 <p align="center">
-  <a href="https://github.com/ReSpotF-ck/-ReSpotif-ck-App/releases/latest">
+  <a href="https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/release-assets">
+    <img src="https://img.shields.io/badge/Download-APK-E60023?style=for-the-badge&logo=android&logoColor=white&labelColor=0d0d0d" alt="download APK">
+  </a>
+  &nbsp;
+  <a href="https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/release-assets">
     <img src="https://img.shields.io/github/v/release/ReSpotF-ck/-ReSpotif-ck-App?style=for-the-badge&logo=github&labelColor=0d0d0d&color=E60023" alt="latest release">
   </a>
   &nbsp;
@@ -24,7 +28,13 @@ ReSpotifuck is a community fork of [Spotilol](https://github.com/oljcvw/Spotilol
 
 ## Download
 
-Get the latest APK from the [GitHub Releases page](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/releases/latest). Download the APK asset and install it on your device. Android may ask you to allow installs from your browser or file manager.
+<p>
+  <a href="https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/release-assets"><img src="https://img.shields.io/badge/Download%20ReSpotifuck-APK-E60023?style=for-the-badge&logo=android&logoColor=white&labelColor=0d0d0d" alt="Download ReSpotifuck APK"></a>
+  &nbsp;
+  <a href="https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/archive"><img src="https://img.shields.io/badge/Old%20versions-archive-555555?style=for-the-badge&logo=github&labelColor=0d0d0d" alt="Old versions archive"></a>
+</p>
+
+Get the latest APK from the [release-assets folder](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/release-assets). Download the APK and install it on your device. Older APKs and retired files are in the [archive folder](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/archive). Android may ask you to allow installs from your browser or file manager.
 
 ## Features
 
@@ -79,7 +89,8 @@ Report bugs and suggest changes through [GitHub Issues](https://github.com/ReSpo
 - [Source code](https://github.com/ReSpotF-ck/-ReSpotif-ck-App)
 - [Releases](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/releases)
 - [Issues](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/issues)
-- [Release APK archive](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/release-assets)
+- [Download APKs (release-assets)](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/release-assets)
+- [Old versions and archived files](https://github.com/ReSpotF-ck/-ReSpotif-ck-App/tree/main/archive)
 - Official social media accounts: none are configured yet.
 
 ## Current maintainer
