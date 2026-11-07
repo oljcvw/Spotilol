@@ -30,10 +30,11 @@ class SpotifyWebViewClient(
             onPageFinishedClean(view, CLASSIC_LOGIN_BUTTON)
         }
 
-        val loggedIn = view.context.getSharedPreferences("spotilol_prefs", 0)
-            .getBoolean("LoggedIn", false)
+        val prefs = view.context.getSharedPreferences("spotilol_prefs", 0)
+        val loggedIn = prefs.getBoolean("LoggedIn", false)
 
         if (!loggedIn) {
+            view.evaluateJavascript(buildThemeJs(prefs), null)
             onPageFinishedClean(view, LOGIN_DETECTION)
             return
         }
